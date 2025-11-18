@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Noticias de IA - WebIAScrap{% endblock %}
+
+{% block content %}
+<h1 class="page-title">📰 Últimas Noticias de IA</h1>
+
+<!-- Stats -->
+<div class="stats">
+    <div class="stat-card">
+        <div class="stat-value">{{ noticias|length }}</div>
+        <div class="stat-label">Noticias Disponibles</div>
+    </div>
+</div>
+
+{% if noticias %}
+    <form action="{{ url_for('seleccionar_noticias') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <!-- News Grid -->
+        <div class="news-grid">
+            {% for noticia in noticias %}
+                <div class="news-card">
+                    <div class="news-card-header">
+                        <div style="flex: 1;">
+                            <h2 class="news-title">
+                                <a href="{{ noticia.url }}" target="_blank" rel="noopener noreferrer">
+                                    {{ noticia.titulo }}
+                                </a>
+                            </h2>
+                            <div class="news-meta">
+                                <div class="news-date">
+                                    📅 {{ noticia.fecha_hora.strftime('%d/%m/%Y %H:%M') }}
+                                </div>
+                                {% if noticia.temas %}
+                                    <div class="news-topics">
+                                        🏷️ {{ noticia.temas }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <input
+                            type="checkbox"
+                            name="noticias_seleccionadas"
+                            value="{{ noticia.id }}"
+                            class="news-checkbox"
+                            id="noticia-{{ noticia.id }}"
+                        >
+                    </div>
+
+                    <p class="news-text">
+                        {{ noticia.texto[:300] }}{% if noticia.texto|length > 300 %}...{% endif %}
+                    </p>
+
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <a href="javascript:void(0)"
+                           onclick="openModal('{{ noticia.titulo|replace("'", "\\'") }}', '{{ noticia.texto|replace("'", "\\'") }}', '{{ noticia.url }}', '{{ noticia.fecha_hora.strftime('%d/%m/%Y %H:%M') }}', '{{ noticia.temas }}')"
+                           class="news-link">
+                            📄 Ver resumen
+                        </a>
+                        <span style="color: var(--border-color);">|</span>
+                        <a href="{{ noticia.url }}" target="_blank" rel="noopener noreferrer" class="news-link">
+                            🔗 Leer completo →
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Form Actions (Sticky Bottom) -->
+        <div class="form-actions">
+            <div class="select-all-container">
+                <input type="checkbox" id="select-all" onclick="toggleSelectAll(this)">
+                <label for="select-all">Seleccionar todo</label>
+            </div>
+
+            <div class="selection-counter">
+                <span id="selected-count">0</span> seleccionadas
+            </div>
+
+            <button type="submit" class="btn btn-success">
+                📤 Copiar seleccionadas a "A Publicar"
+            </button>
+        </div>
+    </form>
+{% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <p class="empty-state-text">No hay noticias disponibles</p>
+        <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+            Haz clic en "Actualizar Noticias" para obtener las últimas noticias de IA
+        </p>
+        <a href="{{ url_for('scrape_manual') }}" class="btn btn-primary">
+            🔄 Actualizar Noticias
+        </a>
+    </div>
+{% endif %}
+
+<!-- Modal para resumen de noticia -->
+<div id="newsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle"></h2>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-meta" id="modalMeta"></div>
+            <div class="modal-summary" id="modalSummary"></div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal()" class="btn btn-secondary">Cerrar</button>
+            <a id="modalLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                🔗 Leer artículo completo
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Modal functions
+    function openModal(title, text, url, fecha, temas) {
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('modalSummary').textContent = text;
+        document.getElementById('modalLink').href = url;
+
+        // Set metadata
+        let metaHtml = `
+            <div><strong>📅 Fecha:</strong> ${fecha}</div>
+            ${temas ? `<div><strong>🏷️ Temas:</strong> ${temas}</div>` : ''}
+        `;
+        document.getElementById('modalMeta').innerHTML = metaHtml;
+
+        // Show modal
+        document.getElementById('newsModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        document.getElementById('newsModal').classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+
+    // Close modal on ESC key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+
+    // Close modal on background click
+    document.getElementById('newsModal').addEventListener('click', function(event) {
+        if (event.target === this) {
+            closeModal();
+        }
+    });
+
+    // Counter functions
+    function updateCounter() {
+        const checkboxes = document.getElementsByClassName('news-checkbox');
+        let count = 0;
+        for (let cb of checkboxes) {
+            if (cb.checked) count++;
+        }
+        document.getElementById('selected-count').textContent = count;
+    }
+
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.getElementsByClassName('news-checkbox');
+        for (let i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].checked = checkbox.checked;
+        }
+        updateCounter();
+    }
+
+    // Auto-deselect "select all" if any checkbox is unchecked
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAllCheckbox = document.getElementById('select-all');
+        const newsCheckboxes = document.getElementsByClassName('news-checkbox');
+
+        for (let checkbox of newsCheckboxes) {
+            checkbox.addEventListener('change', function() {
+                if (!this.checked) {
+                    selectAllCheckbox.checked = false;
+                } else {
+                    // Check if all are selected
+                    let allChecked = true;
+                    for (let cb of newsCheckboxes) {
+                        if (!cb.checked) {
+                            allChecked = false;
+                            break;
+                        }
+                    }
+                    selectAllCheckbox.checked = allChecked;
+                }
+                updateCounter();
+            });
+        }
+    });
+</script>
+{% endblock %}

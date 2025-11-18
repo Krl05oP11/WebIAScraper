@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Logs
+logs/
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Documentation
+README.md
+DEPLOYMENT.md
+MANUAL_USUARIO.md
+docs/
+analysis.json
+architecture_design.json
+refinement_recommendations.json
+validation_report.json
+
+# Tests
+tests/
+pytest.ini
+.pytest_cache

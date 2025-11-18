@@ -1,0 +1,36 @@
+# Requirements para WebIAScrap v0.0.0 MVP
+# Python 3.11+
+
+# Web Framework
+Flask>=3.0.0
+Flask-WTF>=1.2.0
+
+# Database
+psycopg2-binary>=2.9.0
+SQLAlchemy>=2.0.0
+Flask-SQLAlchemy>=3.1.0
+
+# Web Scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+newsapi-python>=0.2.7
+feedparser>=6.0.10
+
+# AI & Translation
+anthropic>=0.18.0
+
+# Scheduling
+APScheduler>=3.10.0
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# NLP para extracción de temas (opcional/simple)
+nltk>=3.8.0
+
+# Testing
+pytest>=7.4.0
+pytest-flask>=1.3.0
+
+# Utilities
+python-dateutil>=2.8.0

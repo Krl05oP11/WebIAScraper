@@ -1,0 +1,130 @@
+{
+  "functional_requirements": [
+    "Explorar la web en busca de noticias relacionadas con IA, Ciencia de Datos y Agentes usando APIs gratuitas",
+    "Almacenar las 30 últimas noticias en una tabla de PostgreSQL con campos: Título, Texto, URL, Fecha-Hora, Temas",
+    "Interfaz de usuario para revisar noticias por fecha/hora",
+    "Permitir al usuario seleccionar noticias con checkbox y copiarlas a la tabla APublicar"
+  ],
+  "non_functional_requirements": [
+    "Rendimiento aceptable para búsquedas diarias",
+    "Interfaz de usuario con colores oscuros en paleta azul para reducir irritación ocular",
+    "Seguridad básica en la conexión a la base de datos y manejo de APIs",
+    "Documentación completa incluyendo Manual del Usuario",
+    "Conjunto de pruebas unitarias y funcionales"
+  ],
+  "architecture_pattern": "Monolito MVC (Model-View-Controller)",
+  "architecture_justification": "Dado que es un proyecto pequeño para un desarrollador individual, el monolito MVC es ideal por su simplicidad y estructura clara. Permite separar claramente las responsabilidades entre la lógica de negocio (Model), la interfaz (View) y el controlador de flujo (Controller). Además, facilita la implementación inicial rápida y la escalabilidad incremental.",
+  "tech_stack": {
+    "frontend": "Flask con plantillas HTML/CSS/JavaScript",
+    "backend": "Python con Flask",
+    "database": "PostgreSQL",
+    "otros": "Docker para aislamiento de entornos"
+  },
+  "main_components": [
+    {
+      "name": "Web Scraper",
+      "description": "Componente que realiza la búsqueda de noticias en la web usando APIs disponibles.",
+      "responsibilities": [
+        "Consultar APIs",
+        "Procesar y extraer datos relevantes"
+      ]
+    },
+    {
+      "name": "Database Layer",
+      "description": "Capa que interactúa con PostgreSQL para almacenar y recuperar noticias.",
+      "responsibilities": [
+        "Conectar a la base de datos",
+        "Manejar consultas SQL"
+      ]
+    },
+    {
+      "name": "User Interface",
+      "description": "Interfaz web que permite al usuario visualizar y seleccionar noticias.",
+      "responsibilities": [
+        "Mostrar listado de noticias",
+        "Gestión de checkboxes",
+        "Estilos CSS con paleta azul oscuro"
+      ]
+    }
+  ],
+  "directory_structure": {
+    "src": {
+      "backend": [
+        "app.py",
+        "models.py",
+        "scrapper.py"
+      ],
+      "frontend": [
+        "templates/",
+        "static/"
+      ],
+      "utilities": [
+        "database.py",
+        "config.py"
+      ]
+    },
+    "tests": [
+      "test_scruders.py",
+      "test_database.py"
+    ],
+    "docs": [
+      "manual_usuario.pdf",
+      "documentacion_tecnica.md"
+    ],
+    "requirements": [
+      "requirements.txt",
+      "dev_requirements.txt"
+    ]
+  },
+  "dependencies": {
+    "frontend": [
+      "Flask",
+      "requests"
+    ],
+    "backend": [
+      "beautifulsoup4",
+      "psycopg2-binary"
+    ],
+    "devops": [
+      "docker",
+      "pytest"
+    ]
+  },
+  "mvp_scope": [
+    "Interfaz básica para visualizar noticias",
+    "Funcionalidad de checkbox y copiado a APublicar",
+    "Base de datos inicial con tablas definidas"
+  ],
+  "roadmap": [
+    {
+      "phase": "MVP",
+      "duration": "3 semanas",
+      "description": "Desarrollo inicial incluyendo interfaz básica y funcionalidad principal.",
+      "features": [
+        "Web Scraper",
+        "Base de datos",
+        "Interfaz minimal"
+      ]
+    },
+    {
+      "phase": "v0.1.0",
+      "duration": "2 semanas",
+      "description": "Mejoras en la UI, desarrollo de pruebas y documentación.",
+      "features": [
+        "Diseño oscuro",
+        "Conjunto de pruebas",
+        "Manual del Usuario"
+      ]
+    },
+    {
+      "phase": "Futuras Iteraciones",
+      "duration": "Indeterminado",
+      "description": "Implementar más funcionalidades como notificaciones, exportación a otros formatos.",
+      "features": [
+        "Notificaciones",
+        "Exportación de datos",
+        "Integración con más APIs"
+      ]
+    }
+  ]
+}

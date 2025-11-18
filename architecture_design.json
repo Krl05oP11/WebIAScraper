@@ -1,0 +1,148 @@
+{
+  "c4_model": {
+    "context_diagram": "Context Diagram:\nWebIAScrap interacts with external systems: Web (via APIs), PostgreSQL Database, Docker Engine. Users access the system through a web browser.",
+    "context_description": "The WebIAScrap application is designed to scrape news articles from public APIs related to AI and Data Science. It stores these articles in a local PostgreSQL database and provides a user interface for review and selection. The application runs within a Docker container to ensure isolation.",
+    "container_diagram": "Container Diagram:\n- Flask Web App (WebIAScrap)\n- PostgreSQL Database\n- Docker Engine",
+    "containers": [
+      {
+        "name": "Flask Web App",
+        "type": "Web App",
+        "technology": "Flask, Python",
+        "description": "Main application handling web scraping, database interactions, and user interface.",
+        "component_diagram": "Component Diagram:\n- WebScraperController\n- NewsDB\n- UIComponents"
+      },
+      {
+        "name": "PostgreSQL Database",
+        "type": "Database",
+        "technology": "PostgreSQL",
+        "description": "Stores news articles and their metadata.",
+        "component_diagram": "Component Diagram:\n- DatabaseConnection\n- QueryProcessor\n- SchemaManager"
+      }
+    ]
+  },
+  "architecture_decisions": [
+    {
+      "id": "ADR-001",
+      "title": "Monolithic MVC Pattern Choice",
+      "decision": "Use Monolithic MVC pattern for simplicity and ease of development.",
+      "context": "The project requires a straightforward implementation with clear separation of concerns.",
+      "alternatives": [
+        "Microservices",
+        "Event-Driven Architecture"
+      ],
+      "consequences": {
+        "positive": [
+          "Simplicity in development",
+          "Easier maintenance"
+        ],
+        "negative": [
+          "Potential scalability issues"
+        ]
+      },
+      "status": "Accepted"
+    }
+  ],
+  "component_specifications": [
+    {
+      "component_name": "Web Scraper",
+      "purpose": "Scrape news articles from public APIs.",
+      "technologies": [
+        "Flask",
+        "Python"
+      ],
+      "public_interfaces": [
+        {
+          "type": "REST API",
+          "description": "API endpoints for web scraping operations.",
+          "endpoints": [
+            "GET /api/scrape"
+          ]
+        }
+      ],
+      "dependencies": [
+        "Database Layer",
+        "Docker Engine"
+      ],
+      "configuration": {
+        "api_key": "secrets.token_hex(16)"
+      },
+      "security_considerations": [
+        "Rate limiting on API calls"
+      ],
+      "performance_considerations": [
+        "Optimized for concurrent requests"
+      ]
+    }
+  ],
+  "api_contracts": [
+    {
+      "service_name": "Web Scraper API",
+      "base_url": "/api/v1/scrape",
+      "authentication": "None (public API)",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/scrape",
+          "description": "Triggers web scraping process.",
+          "request_schema": {},
+          "response_schema": {
+            "message": "string"
+          },
+          "status_codes": {
+            "200": "Success",
+            "500": "Error"
+          }
+        }
+      ]
+    }
+  ],
+  "deployment_guide": {
+    "infrastructure_requirements": {
+      "compute": "Docker-enabled system with sufficient CPU and memory.",
+      "storage": "PostgreSQL database on local disk.",
+      "network": "Access to public APIs and internet."
+    },
+    "environment_variables": [
+      {
+        "name": "DB_HOST",
+        "description": "Database host address.",
+        "required": true,
+        "default": "localhost"
+      }
+    ],
+    "deployment_steps": [
+      "Run docker-compose up",
+      "Initialize database schema"
+    ],
+    "production_configuration": "Set environment variables and configure logging.",
+    "monitoring": "Monitor CPU, memory, and request rates.",
+    "backup_strategy": "Daily backups of PostgreSQL database."
+  },
+  "sequence_diagrams": [
+    {
+      "flow_name": "News Scraping Process",
+      "description": "Flow for web scraping news articles.",
+      "diagram": "1. WebScraperController initiates API requests.\n2. Data is processed and stored in NewsDB.\n3. Confirmation is sent back to UIComponents.",
+      "steps": [
+        "Initiate API request",
+        "Process data",
+        "Store in database"
+      ]
+    }
+  ],
+  "glossary": {
+    "WebIAScrap": "A web scraping application for AI-related news articles.",
+    "Monolithic MVC Pattern": "A design pattern combining Model-View-Controller into a single component."
+  },
+  "documentation_metadata": {
+    "version": "1.0",
+    "last_updated": "2023-10-25",
+    "authors": [
+      "ArqSysIA"
+    ],
+    "status": "Approved"
+  },
+  "project_name": "WebIAScrap v0.0.0",
+  "architecture_pattern": "Monolito MVC (Model-View-Controller)",
+  "iteration": 3
+}

@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}A Publicar - WebIAScrap{% endblock %}
+
+{% block content %}
+<h1 class="page-title">📤 Noticias Seleccionadas para Publicar</h1>
+
+<!-- Stats -->
+<div class="stats">
+    <div class="stat-card">
+        <div class="stat-value">{{ noticias|length }}</div>
+        <div class="stat-label">Total Seleccionadas</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ noticias|selectattr('procesado')|list|length }}</div>
+        <div class="stat-label">Procesadas</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ noticias|rejectattr('procesado')|list|length }}</div>
+        <div class="stat-label">Pendientes</div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+{% if noticias|rejectattr('procesado')|list|length > 0 %}
+<div style="margin-bottom: 2rem; display: flex; gap: 1rem; justify-content: center;">
+    <form method="POST" action="{{ url_for('procesar_todas') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="btn btn-primary" onclick="return confirm('¿Procesar todas las noticias pendientes? Esto usará la API de Claude.')">
+            🤖 Procesar Todas las Pendientes
+        </button>
+    </form>
+    <a href="{{ url_for('export_social_media') }}?procesados=true" class="btn btn-secondary">
+        📥 Exportar JSON (Solo Procesadas)
+    </a>
+</div>
+{% endif %}
+
+{% if noticias %}
+    <!-- News Grid -->
+    <div class="news-grid">
+        {% for noticia in noticias %}
+            <div class="news-card {% if noticia.procesado %}processed-card{% endif %}">
+                <!-- Header con título y acciones -->
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                    <div style="flex: 1;">
+                        {% if noticia.procesado and noticia.titulo_es %}
+                            <h2 class="news-title" style="margin-bottom: 0.5rem;">
+                                <a href="{{ noticia.url }}" target="_blank" rel="noopener noreferrer">
+                                    {{ noticia.titulo_es }}
+                                </a>
+                            </h2>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); font-style: italic;">
+                                Original: {{ noticia.titulo }}
+                            </p>
+                        {% else %}
+                            <h2 class="news-title" style="margin-bottom: 0;">
+                                <a href="{{ noticia.url }}" target="_blank" rel="noopener noreferrer">
+                                    {{ noticia.titulo }}
+                                </a>
+                            </h2>
+                        {% endif %}
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; margin-left: 1rem;">
+                        {% if not noticia.procesado %}
+                            <form method="POST" action="{{ url_for('procesar_noticia', noticia_id=noticia.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.9rem;">
+                                    🤖 Procesar
+                                </button>
+                            </form>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('eliminar_apublicar', noticia_id=noticia.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn-delete" onclick="return confirm('¿Eliminar esta noticia de A Publicar?')">
+                                🗑️
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Estado y metadata -->
+                <div class="news-meta" style="margin-bottom: 1rem;">
+                    <div class="news-date">
+                        📅 Publicado: {{ noticia.fecha_hora.strftime('%d/%m/%Y %H:%M') }}
+                    </div>
+                    <div class="news-date">
+                        ⭐ Seleccionado: {{ noticia.selected_at.strftime('%d/%m/%Y %H:%M') }}
+                    </div>
+                    {% if noticia.procesado %}
+                        <div style="color: var(--success); font-weight: 600;">
+                            ✅ Procesado
+                        </div>
+                    {% else %}
+                        <div style="color: var(--warning); font-weight: 600;">
+                            ⏳ Pendiente
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Categoría y hashtags (si está procesado) -->
+                {% if noticia.procesado %}
+                    <div class="news-meta" style="margin-bottom: 1rem;">
+                        {% if noticia.categoria %}
+                            <div style="background-color: var(--tertiary-dark); padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem;">
+                                📂 {{ noticia.categoria }}
+                            </div>
+                        {% endif %}
+                        {% if noticia.hashtags %}
+                            <div class="news-topics">
+                                #️⃣ {{ noticia.hashtags }}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% elif noticia.temas %}
+                    <div class="news-meta" style="margin-bottom: 1rem;">
+                        <div class="news-topics">
+                            🏷️ {{ noticia.temas }}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Contenido traducido o original -->
+                {% if noticia.procesado and noticia.texto_es %}
+                    <div style="margin-bottom: 1rem;">
+                        <h3 style="font-size: 1rem; color: var(--accent-blue); margin-bottom: 0.5rem;">📱 Resúmenes para RRSS:</h3>
+
+                        <!-- Twitter/LinkedIn -->
+                        {% if noticia.resumen_corto %}
+                            <div style="background-color: var(--tertiary-dark); padding: 1rem; border-radius: 6px; margin-bottom: 0.75rem; border-left: 3px solid #1DA1F2;">
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight: 600;">
+                                    🐦 Twitter / LinkedIn ({{ noticia.resumen_corto|length }} caracteres)
+                                </div>
+                                <p style="margin: 0; color: var(--text-primary);">{{ noticia.resumen_corto }}</p>
+                            </div>
+                        {% endif %}
+
+                        <!-- Facebook -->
+                        {% if noticia.resumen_medio %}
+                            <div style="background-color: var(--tertiary-dark); padding: 1rem; border-radius: 6px; margin-bottom: 0.75rem; border-left: 3px solid #4267B2;">
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight: 600;">
+                                    👥 Facebook ({{ noticia.resumen_medio|length }} caracteres)
+                                </div>
+                                <p style="margin: 0; color: var(--text-primary);">{{ noticia.resumen_medio }}</p>
+                            </div>
+                        {% endif %}
+
+                        <!-- Instagram/WhatsApp -->
+                        {% if noticia.resumen_largo %}
+                            <div style="background-color: var(--tertiary-dark); padding: 1rem; border-radius: 6px; border-left: 3px solid #E1306C;">
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight: 600;">
+                                    📸 Instagram / WhatsApp ({{ noticia.resumen_largo|length }} caracteres)
+                                </div>
+                                <p style="margin: 0; color: var(--text-primary);">{{ noticia.resumen_largo }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <p class="news-text">
+                        {{ noticia.texto[:400] }}{% if noticia.texto|length > 400 %}...{% endif %}
+                    </p>
+                {% endif %}
+
+                <!-- Links -->
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <a href="{{ noticia.url }}" target="_blank" rel="noopener noreferrer" class="news-link">
+                        🔗 Artículo original →
+                    </a>
+                    {% if noticia.procesado %}
+                        <span style="color: var(--border-color);">|</span>
+                        <a href="{{ url_for('export_social_media') }}?ids={{ noticia.id }}" class="news-link">
+                            📥 Descargar JSON
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div style="text-align: center; margin-top: 2rem;">
+        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+            💡 WebIAScrap v0.1.0 - Las noticias procesadas incluyen traducción al español y optimización para RRSS
+        </p>
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                ← Volver a Noticias
+            </a>
+            {% if noticias|selectattr('procesado')|list|length > 0 %}
+                <a href="{{ url_for('export_social_media') }}?procesados=true" class="btn btn-primary">
+                    📥 Exportar Todas las Procesadas (JSON)
+                </a>
+            {% endif %}
+        </div>
+    </div>
+{% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <p class="empty-state-text">No hay noticias seleccionadas para publicar</p>
+        <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+            Ve a la sección de Noticias y selecciona las que te interesen
+        </p>
+        <a href="{{ url_for('index') }}" class="btn btn-primary">
+            📰 Ver Noticias
+        </a>
+    </div>
+{% endif %}
+{% endblock %}
