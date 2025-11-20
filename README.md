@@ -11,6 +11,7 @@ WebIAScrap es una aplicación web que:
 - ✅ Interfaz con paleta azul oscura para reducir fatiga ocular
 - ✅ Sistema de selección con checkboxes para marcar noticias de interés
 - ✅ Copia noticias seleccionadas a tabla "APublicar" para procesamiento posterior
+- ✅ **NUEVO:** Publicación automatizada en redes sociales (LinkedIn, Twitter, Bluesky, Telegram)
 - ✅ Ejecuta completamente aislado en Docker
 
 ## 🚀 Quick Start
@@ -240,14 +241,50 @@ Health check de la aplicación
 curl http://localhost:8000/health
 ```
 
+## 📱 Publicación Automatizada en Redes Sociales
+
+### **NUEVO en Fase 1:** SocialPublisher Microservice
+
+WebIAScrap ahora incluye un microservicio de publicación automatizada en redes sociales que:
+
+- ✅ Publica automáticamente en **LinkedIn, Twitter/X, Bluesky y Telegram**
+- ✅ Sistema de queue interno con retry logic
+- ✅ Rate limiting inteligente por plataforma
+- ✅ Tracking completo de publicaciones en BD
+- ✅ Arquitectura de microservicios escalable
+
+#### Configuración Rápida
+
+1. **Migrar la base de datos:**
+   ```bash
+   ./migrate_db.sh
+   ```
+
+2. **Configurar credenciales:**
+   ```bash
+   cp .env.social_publisher.example .env.social_publisher
+   nano .env.social_publisher  # Completar con tus credenciales
+   ```
+
+3. **Iniciar servicios:**
+   ```bash
+   docker-compose up --build
+   ```
+
+#### Documentación Completa
+
+- 📖 [Guía de Configuración Paso a Paso](SETUP_SOCIAL_MEDIA.md)
+- 📖 [Documentación del SocialPublisher](social_publisher/README.md)
+- 📊 [Informe de Factibilidad de Redes Sociales](SOCIAL_MEDIA_FEASIBILITY_REPORT.md)
+
 ## 🚧 Próximas Versiones
 
-### v0.1.0 (Planeada)
-- Procesamiento automático de noticias en tabla `apublicar`
-- Exportación a diferentes formatos (PDF, CSV, etc.)
-- Sistema de notificaciones
-- Filtros avanzados de búsqueda
-- Dashboard con estadísticas
+### v0.2.0 (Planeada)
+- Threads, Facebook y Mastodon adapters (Fase 2)
+- Scheduling: publicación en horarios óptimos
+- A/B Testing: diferentes formatos de mensaje
+- Analytics: tracking de engagement
+- Auto-hashtags y auto-imágenes con IA
 
 ## 📝 Notas de Desarrollo
 

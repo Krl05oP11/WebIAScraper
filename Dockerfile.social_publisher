@@ -1,0 +1,29 @@
+FROM python:3.11-slim
+
+# Variables de entorno
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Directorio de trabajo
+WORKDIR /app
+
+# Instalar dependencias del sistema
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar requirements
+COPY social_publisher/requirements.txt /app/social_publisher/requirements.txt
+
+# Instalar dependencias de Python
+RUN pip install --no-cache-dir -r /app/social_publisher/requirements.txt
+
+# Copiar código del microservicio
+COPY social_publisher/ /app/social_publisher/
+
+# Crear directorio de logs
+RUN mkdir -p /app/logs
+
+# Comando por defecto
+CMD ["python", "-m", "social_publisher.main"]

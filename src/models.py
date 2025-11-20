@@ -3,7 +3,7 @@ Modelos de base de datos para WebIAScrap
 """
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, JSON
 
 db = SQLAlchemy()
 
@@ -69,9 +69,16 @@ class APublicar(db.Model):
     categoria = Column(String(100), nullable=True)  # Tutorial, Research, Tools, etc.
     procesado = Column(Boolean, default=False)  # Si ya fue procesado por Claude
 
+    # Tracking de publicación en redes sociales
+    publicado = Column(Boolean, default=False)  # Si ya fue publicada en al menos una plataforma
+    plataformas_publicadas = Column(JSON, nullable=True)  # {"linkedin": {"post_id": "...", "url": "...", "published_at": "..."}}
+    intentos_publicacion = Column(Integer, default=0)  # Contador de intentos de publicación
+    ultimo_error = Column(Text, nullable=True)  # Último error de publicación si hubo
+
     # Timestamps
     selected_at = Column(DateTime, default=datetime.utcnow)
     processed_at = Column(DateTime, nullable=True)  # Cuando fue procesado
+    published_at = Column(DateTime, nullable=True)  # Primera publicación exitosa
 
     def __repr__(self):
         return f'<APublicar {self.id}: {self.titulo[:50]}>'
@@ -94,8 +101,13 @@ class APublicar(db.Model):
             'hashtags': self.hashtags,
             'categoria': self.categoria,
             'procesado': self.procesado,
+            'publicado': self.publicado,
+            'plataformas_publicadas': self.plataformas_publicadas,
+            'intentos_publicacion': self.intentos_publicacion,
+            'ultimo_error': self.ultimo_error,
             'selected_at': self.selected_at.isoformat() if self.selected_at else None,
-            'processed_at': self.processed_at.isoformat() if self.processed_at else None
+            'processed_at': self.processed_at.isoformat() if self.processed_at else None,
+            'published_at': self.published_at.isoformat() if self.published_at else None
         }
 
     def to_social_media_json(self):

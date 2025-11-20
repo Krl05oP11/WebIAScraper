@@ -428,6 +428,129 @@ def stats_processing():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/news/to-publish', methods=['GET'])
+def api_news_to_publish():
+    """
+    API endpoint para que SocialPublisher obtenga noticias pendientes de publicar
+
+    Query params:
+        - procesados: true/false (default: true) - solo noticias procesadas
+        - limit: int (default: 10) - cantidad máxima de noticias
+    """
+    try:
+        # Parámetros
+        solo_procesados = request.args.get('procesados', 'true').lower() == 'true'
+        limit = request.args.get('limit', 10, type=int)
+
+        # Query base
+        query = APublicar.query.filter_by(publicado=False)
+
+        if solo_procesados:
+            query = query.filter_by(procesado=True)
+
+        # Ordenar por fecha de selección y limitar
+        noticias = query.order_by(APublicar.selected_at.asc()).limit(limit).all()
+
+        return jsonify({
+            'count': len(noticias),
+            'noticias': [noticia.to_dict() for noticia in noticias]
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error obteniendo noticias para publicar: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/news/<int:noticia_id>/mark-published', methods=['POST'])
+def api_mark_published(noticia_id):
+    """
+    Marcar una noticia como publicada en una plataforma específica
+
+    Body JSON:
+    {
+        "platform": "linkedin",
+        "post_id": "urn:li:share:123456",
+        "post_url": "https://linkedin.com/...",
+        "error": null  # opcional, si hubo error
+    }
+    """
+    try:
+        noticia = APublicar.query.get_or_404(noticia_id)
+        data = request.get_json()
+
+        if not data or 'platform' not in data:
+            return jsonify({'error': 'platform es requerido'}), 400
+
+        platform = data['platform']
+
+        # Inicializar plataformas_publicadas si es None
+        if noticia.plataformas_publicadas is None:
+            noticia.plataformas_publicadas = {}
+
+        # Si hubo error
+        if data.get('error'):
+            noticia.ultimo_error = f"{platform}: {data['error']}"
+            noticia.intentos_publicacion = (noticia.intentos_publicacion or 0) + 1
+            db.session.commit()
+
+            return jsonify({
+                'message': 'Error registrado',
+                'noticia_id': noticia_id,
+                'error': data['error']
+            }), 200
+
+        # Publicación exitosa
+        noticia.plataformas_publicadas[platform] = {
+            'post_id': data.get('post_id'),
+            'post_url': data.get('post_url'),
+            'published_at': datetime.utcnow().isoformat()
+        }
+
+        # Marcar como publicada si es la primera plataforma
+        if not noticia.publicado:
+            noticia.publicado = True
+            noticia.published_at = datetime.utcnow()
+
+        noticia.intentos_publicacion = (noticia.intentos_publicacion or 0) + 1
+        noticia.ultimo_error = None  # Limpiar error previo
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Noticia marcada como publicada',
+            'noticia_id': noticia_id,
+            'platform': platform,
+            'total_platforms': len(noticia.plataformas_publicadas)
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error marcando noticia {noticia_id} como publicada: {e}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/news/<int:noticia_id>/publication-status', methods=['GET'])
+def api_publication_status(noticia_id):
+    """
+    Obtener el estado de publicación de una noticia
+    """
+    try:
+        noticia = APublicar.query.get_or_404(noticia_id)
+
+        return jsonify({
+            'noticia_id': noticia_id,
+            'publicado': noticia.publicado,
+            'plataformas': noticia.plataformas_publicadas or {},
+            'intentos': noticia.intentos_publicacion or 0,
+            'ultimo_error': noticia.ultimo_error,
+            'published_at': noticia.published_at.isoformat() if noticia.published_at else None
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error obteniendo estado de publicación: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/health')
 def health():
     """

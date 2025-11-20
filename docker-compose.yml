@@ -41,8 +41,31 @@ services:
     networks:
       - webiascrap_network
 
+  social_publisher:
+    build:
+      context: .
+      dockerfile: Dockerfile.social_publisher
+    container_name: webiascrap_social_publisher
+    restart: unless-stopped
+    env_file:
+      - .env.social_publisher
+    volumes:
+      - ./social_publisher:/app/social_publisher
+      - publisher_logs:/app/logs
+    depends_on:
+      - app
+    networks:
+      - webiascrap_network
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'python -m social_publisher.main' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   postgres_data:
+    driver: local
+  publisher_logs:
     driver: local
 
 networks:

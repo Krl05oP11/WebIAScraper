@@ -38,6 +38,7 @@ env/
 .env.local
 .env.production
 .env.tmp
+.env.social_publisher
 *API?Key*.txt
 *Clave?API*.txt
 
