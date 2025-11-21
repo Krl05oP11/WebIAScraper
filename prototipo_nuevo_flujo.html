@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototipo - Nuevo Flujo de Publicación</title>
+    <style>
+        :root {
+            --primary-dark: #0a0e27;
+            --secondary-dark: #151932;
+            --tertiary-dark: #1e2139;
+            --accent-blue: #4a9eff;
+            --text-primary: #e8eaed;
+            --text-secondary: #9aa0a6;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff6b6b;
+            --border-color: #2e3348;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--primary-dark);
+            color: var(--text-primary);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--accent-blue);
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #3d8ae6;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background-color: #2e3348;
+            color: var(--text-secondary);
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-dark);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--tertiary-dark);
+        }
+
+        .news-card {
+            background-color: var(--secondary-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .news-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .news-title {
+            flex: 1;
+            font-size: 1.3rem;
+            color: var(--accent-blue);
+        }
+
+        .btn-delete {
+            background-color: transparent;
+            color: var(--error);
+            border: 1px solid var(--error);
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-delete:hover {
+            background-color: var(--error);
+            color: white;
+        }
+
+        .phase-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .phase-pendiente { background-color: #ffaa0030; color: var(--warning); }
+        .phase-procesado { background-color: #00ff8830; color: var(--success); }
+        .phase-publicando { background-color: #4a9eff30; color: var(--accent-blue); }
+
+        .platforms-selector {
+            background-color: var(--tertiary-dark);
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .platforms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .platform-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background-color: var(--secondary-dark);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .platform-checkbox:hover {
+            background-color: var(--tertiary-dark);
+            border-color: var(--accent-blue);
+        }
+
+        .platform-checkbox input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .platform-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background-color: var(--tertiary-dark);
+            border-radius: 6px;
+            border-left: 3px solid #666;
+        }
+
+        .platform-status.success { border-left-color: #00ff00; }
+        .platform-status.error { border-left-color: #ff0000; }
+        .platform-status.pending { border-left-color: #ffaa00; }
+        .platform-status.waiting { border-left-color: #ffaa00; animation: pulse 2s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .semaforo {
+            font-size: 1.5rem;
+        }
+
+        .semaforo.blinking {
+            animation: blink 1s infinite;
+        }
+
+        .contador {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-family: 'Courier New', monospace;
+        }
+
+        .retry-counter {
+            background-color: var(--warning);
+            color: var(--primary-dark);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .info-box {
+            background-color: var(--tertiary-dark);
+            border-left: 3px solid var(--accent-blue);
+            padding: 1rem;
+            margin-bottom: 2rem;
+            border-radius: 6px;
+        }
+
+        .info-box h3 {
+            color: var(--accent-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .info-box ul {
+            margin-left: 1.5rem;
+        }
+
+        .info-box li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📤 Prototipo - Nuevo Flujo de Publicación</h1>
+
+        <div class="info-box">
+            <h3>🎯 Cómo funciona el nuevo flujo:</h3>
+            <ul>
+                <li><strong>Fase 1:</strong> Selecciona plataformas con los checkboxes (siempre visibles)</li>
+                <li><strong>Fase 2:</strong> Haz clic en "PUBLICAR Seleccionadas" (se habilita al marcar al menos 1 checkbox)</li>
+                <li><strong>Fase 3:</strong> El sistema procesa con Claude (si es necesario) y publica</li>
+                <li><strong>Semáforo:</strong> 🟡 parpadeante = enviando, 🟢 = OK, 🔴 = error, ⚪ = no seleccionado</li>
+                <li><strong>Contador:</strong> Muestra tiempo restante (60/60s ... 0/60s)</li>
+                <li><strong>Reintentos:</strong> 3 intentos automáticos cada 10 min, luego manual</li>
+            </ul>
+        </div>
+
+        <div class="header-buttons">
+            <button class="btn btn-secondary">🤖 Procesar Todas con Claude</button>
+            <button class="btn btn-primary" id="btnPublicar" disabled>📤 PUBLICAR Seleccionadas</button>
+            <button class="btn btn-secondary">📥 Exportar JSON</button>
+        </div>
+
+        <!-- Noticia 1: Pendiente de procesar -->
+        <div class="news-card">
+            <div class="news-header">
+                <div style="flex: 1;">
+                    <div class="phase-badge phase-pendiente">⏳ Pendiente de procesar</div>
+                    <h2 class="news-title">OpenAI announces GPT-5 with revolutionary capabilities</h2>
+                </div>
+                <button class="btn-delete" onclick="if(confirm('¿Eliminar esta noticia?')) this.closest('.news-card').remove();" title="Eliminar noticia">🗑️</button>
+            </div>
+
+            <div class="platforms-selector">
+                <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary);">📡 Selecciona plataformas para publicar:</h4>
+                <div class="platforms-grid">
+                    <label class="platform-checkbox">
+                        <input type="checkbox" value="telegram" onchange="updatePublishButton()">
+                        <span>📱 Telegram</span>
+                    </label>
+                    <label class="platform-checkbox">
+                        <input type="checkbox" value="bluesky" onchange="updatePublishButton()">
+                        <span>🦋 Bluesky</span>
+                    </label>
+                    <label class="platform-checkbox">
+                        <input type="checkbox" value="twitter" onchange="updatePublishButton()">
+                        <span>🐦 Twitter/X</span>
+                    </label>
+                    <label class="platform-checkbox" style="opacity: 0.5;">
+                        <input type="checkbox" value="linkedin" disabled>
+                        <span>💼 LinkedIn <small>(próximamente)</small></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Noticia 2: Procesada, esperando publicación -->
+        <div class="news-card">
+            <div class="news-header">
+                <div style="flex: 1;">
+                    <div class="phase-badge phase-procesado">✅ Procesado con Claude</div>
+                    <h2 class="news-title">Google DeepMind releases new AI model for scientific research</h2>
+                </div>
+                <button class="btn-delete" onclick="if(confirm('¿Eliminar esta noticia?')) this.closest('.news-card').remove();" title="Eliminar noticia">🗑️</button>
+            </div>
+
+            <div class="platforms-selector">
+                <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary);">📡 Selecciona plataformas para publicar:</h4>
+                <div class="platforms-grid">
+                    <label class="platform-checkbox">
+                        <input type="checkbox" value="telegram" checked onchange="updatePublishButton()">
+                        <span>📱 Telegram</span>
+                    </label>
+                    <label class="platform-checkbox">
+                        <input type="checkbox" value="bluesky" checked onchange="updatePublishButton()">
+                        <span>🦋 Bluesky</span>
+                    </label>
+                    <label class="platform-checkbox">
+                        <input type="checkbox" value="twitter" onchange="updatePublishButton()">
+                        <span>🐦 Twitter/X</span>
+                    </label>
+                    <label class="platform-checkbox" style="opacity: 0.5;">
+                        <input type="checkbox" value="linkedin" disabled>
+                        <span>💼 LinkedIn <small>(próximamente)</small></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Noticia 3: Publicando (simulación) -->
+        <div class="news-card">
+            <div class="news-header">
+                <div style="flex: 1;">
+                    <div class="phase-badge phase-publicando">📤 Publicando...</div>
+                    <h2 class="news-title">Meta announces Llama 4 with multimodal capabilities</h2>
+                </div>
+                <button class="btn-delete" onclick="if(confirm('¿Eliminar esta noticia?')) this.closest('.news-card').remove();" title="Eliminar noticia">🗑️</button>
+            </div>
+
+            <div class="platforms-selector">
+                <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary);">📊 Estado de publicación:</h4>
+                <div class="platforms-grid">
+                    <div class="platform-status waiting">
+                        <span class="semaforo blinking">🟡</span>
+                        <span>📱 Telegram</span>
+                        <span class="contador" style="margin-left: auto;">45/60s</span>
+                    </div>
+                    <div class="platform-status waiting">
+                        <span class="semaforo blinking">🟡</span>
+                        <span>🦋 Bluesky</span>
+                        <span class="contador" style="margin-left: auto;">38/60s</span>
+                    </div>
+                    <div class="platform-status success">
+                        <span class="semaforo">🟢</span>
+                        <span>🐦 Twitter/X</span>
+                        <a href="#" style="margin-left: auto; color: var(--accent-blue); text-decoration: none;">🔗</a>
+                    </div>
+                    <div class="platform-status" style="opacity: 0.6;">
+                        <span class="semaforo">⚪</span>
+                        <span style="color: var(--text-secondary);">💼 LinkedIn</span>
+                        <span style="margin-left: auto; font-size: 0.75rem; color: var(--text-secondary);">No seleccionado</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Noticia 4: Publicada con error y reintentos -->
+        <div class="news-card">
+            <div class="news-header">
+                <div style="flex: 1;">
+                    <div class="phase-badge phase-publicando">⚠️ Publicación parcial - Reintentando</div>
+                    <h2 class="news-title">Anthropic introduces Claude 4 with enhanced reasoning</h2>
+                </div>
+                <button class="btn-delete" onclick="if(confirm('¿Eliminar esta noticia?')) this.closest('.news-card').remove();" title="Eliminar noticia">🗑️</button>
+            </div>
+
+            <div class="platforms-selector">
+                <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary);">📊 Estado de publicación:</h4>
+                <div style="margin-bottom: 0.75rem; padding: 0.5rem; background-color: var(--warning); color: var(--primary-dark); border-radius: 4px; font-weight: 600;">
+                    🔄 Reintento automático 2/3 - Próximo intento en 8:45 minutos
+                </div>
+                <div class="platforms-grid">
+                    <div class="platform-status success">
+                        <span class="semaforo">🟢</span>
+                        <span>📱 Telegram</span>
+                        <a href="#" style="margin-left: auto; color: var(--accent-blue); text-decoration: none;">🔗</a>
+                    </div>
+                    <div class="platform-status error" title="Error: Connection timeout">
+                        <span class="semaforo">🔴</span>
+                        <span>🦋 Bluesky</span>
+                        <span class="retry-counter" style="margin-left: auto;">2/3</span>
+                    </div>
+                    <div class="platform-status success">
+                        <span class="semaforo">🟢</span>
+                        <span>🐦 Twitter/X</span>
+                        <a href="#" style="margin-left: auto; color: var(--accent-blue); text-decoration: none;">🔗</a>
+                    </div>
+                    <div class="platform-status" style="opacity: 0.6;">
+                        <span class="semaforo">⚪</span>
+                        <span style="color: var(--text-secondary);">💼 LinkedIn</span>
+                        <span style="margin-left: auto; font-size: 0.75rem; color: var(--text-secondary);">No seleccionado</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Noticia 5: Completamente publicada -->
+        <div class="news-card">
+            <div class="news-header">
+                <div style="flex: 1;">
+                    <div class="phase-badge phase-procesado">✅ Publicado exitosamente</div>
+                    <h2 class="news-title">Microsoft integrates GPT-4 into Office Suite</h2>
+                </div>
+                <button class="btn-delete" onclick="if(confirm('¿Eliminar esta noticia?')) this.closest('.news-card').remove();" title="Eliminar noticia">🗑️</button>
+            </div>
+
+            <div class="platforms-selector">
+                <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary);">📊 Estado de publicación:</h4>
+                <div class="platforms-grid">
+                    <div class="platform-status success">
+                        <span class="semaforo">🟢</span>
+                        <span>📱 Telegram</span>
+                        <a href="#" style="margin-left: auto; color: var(--accent-blue); text-decoration: none;">🔗</a>
+                    </div>
+                    <div class="platform-status success">
+                        <span class="semaforo">🟢</span>
+                        <span>🦋 Bluesky</span>
+                        <a href="#" style="margin-left: auto; color: var(--accent-blue); text-decoration: none;">🔗</a>
+                    </div>
+                    <div class="platform-status success">
+                        <span class="semaforo">🟢</span>
+                        <span>🐦 Twitter/X</span>
+                        <a href="#" style="margin-left: auto; color: var(--accent-blue); text-decoration: none;">🔗</a>
+                    </div>
+                    <div class="platform-status" style="opacity: 0.6;">
+                        <span class="semaforo">⚪</span>
+                        <span style="color: var(--text-secondary);">💼 LinkedIn</span>
+                        <span style="margin-left: auto; font-size: 0.75rem; color: var(--text-secondary);">No seleccionado</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function updatePublishButton() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]:not([disabled])');
+            const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+            document.getElementById('btnPublicar').disabled = !anyChecked;
+        }
+
+        // Simular contador regresivo
+        let contadores = document.querySelectorAll('.contador');
+        setInterval(() => {
+            contadores.forEach(contador => {
+                let match = contador.textContent.match(/(\d+)\/60s/);
+                if (match) {
+                    let segundos = parseInt(match[1]);
+                    if (segundos > 0) {
+                        contador.textContent = `${segundos - 1}/60s`;
+                    }
+                }
+            });
+        }, 1000);
+
+        // Inicializar estado del botón
+        updatePublishButton();
+    </script>
+</body>
+</html>
