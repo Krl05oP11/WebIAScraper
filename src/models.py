@@ -71,14 +71,22 @@ class APublicar(db.Model):
 
     # Tracking de publicación en redes sociales
     publicado = Column(Boolean, default=False)  # Si ya fue publicada en al menos una plataforma
-    plataformas_publicadas = Column(JSON, nullable=True)  # {"linkedin": {"post_id": "...", "url": "...", "published_at": "..."}}
-    intentos_publicacion = Column(Integer, default=0)  # Contador de intentos de publicación
+    plataformas_seleccionadas = Column(JSON, nullable=True)  # ["telegram", "bluesky", "twitter", "linkedin"] - Plataformas elegidas por el usuario
+    plataformas_publicadas = Column(JSON, nullable=True)  # {"linkedin": {"post_id": "...", "url": "...", "published_at": "...", "intentos": 0}}
+    intentos_publicacion = Column(Integer, default=0)  # Contador de intentos de publicación GLOBAL (deprecated - usar plataformas_publicadas)
     ultimo_error = Column(Text, nullable=True)  # Último error de publicación si hubo
+
+    # Nuevos campos para flujo mejorado
+    fase = Column(String(50), default='pendiente')  # pendiente, procesando, procesado, publicando, publicado_parcial, publicado_completo, fallido
+    contador_reintentos = Column(Integer, default=0)  # Reintentos automáticos realizados (máx 3)
+    ultimo_intento = Column(DateTime, nullable=True)  # Timestamp del último intento de publicación
+    proximo_reintento = Column(DateTime, nullable=True)  # Timestamp del próximo reintento automático
 
     # Timestamps
     selected_at = Column(DateTime, default=datetime.utcnow)
     processed_at = Column(DateTime, nullable=True)  # Cuando fue procesado
     published_at = Column(DateTime, nullable=True)  # Primera publicación exitosa
+    expires_at = Column(DateTime, nullable=True)  # Fecha de expiración (selected_at + 2 días)
 
     def __repr__(self):
         return f'<APublicar {self.id}: {self.titulo[:50]}>'
@@ -102,12 +110,18 @@ class APublicar(db.Model):
             'categoria': self.categoria,
             'procesado': self.procesado,
             'publicado': self.publicado,
+            'plataformas_seleccionadas': self.plataformas_seleccionadas,
             'plataformas_publicadas': self.plataformas_publicadas,
             'intentos_publicacion': self.intentos_publicacion,
             'ultimo_error': self.ultimo_error,
+            'fase': self.fase,
+            'contador_reintentos': self.contador_reintentos,
+            'ultimo_intento': self.ultimo_intento.isoformat() if self.ultimo_intento else None,
+            'proximo_reintento': self.proximo_reintento.isoformat() if self.proximo_reintento else None,
             'selected_at': self.selected_at.isoformat() if self.selected_at else None,
             'processed_at': self.processed_at.isoformat() if self.processed_at else None,
-            'published_at': self.published_at.isoformat() if self.published_at else None
+            'published_at': self.published_at.isoformat() if self.published_at else None,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None
         }
 
     def to_social_media_json(self):

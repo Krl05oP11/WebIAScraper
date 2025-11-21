@@ -22,17 +22,26 @@
 </div>
 
 <!-- Action Buttons -->
-{% if noticias|rejectattr('procesado')|list|length > 0 %}
-<div style="margin-bottom: 2rem; display: flex; gap: 1rem; justify-content: center;">
+{% if noticias %}
+<div style="margin-bottom: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+    {% if noticias|rejectattr('procesado')|list|length > 0 %}
     <form method="POST" action="{{ url_for('procesar_todas') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <button type="submit" class="btn btn-primary" onclick="return confirm('¿Procesar todas las noticias pendientes? Esto usará la API de Claude.')">
-            🤖 Procesar Todas las Pendientes
+        <button type="submit" class="btn btn-secondary" onclick="return confirm('¿Procesar todas las noticias pendientes con Claude? Esto usará la API de Claude.')">
+            🤖 Procesar Todas con Claude
         </button>
     </form>
+    {% endif %}
+
+    <button type="button" id="btn-publicar-seleccionadas" class="btn btn-primary" onclick="publicarSeleccionadas()" disabled>
+        📤 PUBLICAR Seleccionadas
+    </button>
+
+    {% if noticias|selectattr('procesado')|list|length > 0 %}
     <a href="{{ url_for('export_social_media') }}?procesados=true" class="btn btn-secondary">
-        📥 Exportar JSON (Solo Procesadas)
+        📥 Exportar JSON
     </a>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -64,12 +73,9 @@
 
                     <div style="display: flex; gap: 0.5rem; margin-left: 1rem;">
                         {% if not noticia.procesado %}
-                            <form method="POST" action="{{ url_for('procesar_noticia', noticia_id=noticia.id) }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <button type="submit" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.9rem;">
-                                    🤖 Procesar
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.9rem;" onclick="togglePlatformSelector({{ noticia.id }})">
+                                🤖 Procesar
+                            </button>
                         {% endif %}
                         <form method="POST" action="{{ url_for('eliminar_apublicar', noticia_id=noticia.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
@@ -79,6 +85,56 @@
                         </form>
                     </div>
                 </div>
+
+                <!-- Selector de Plataformas (inicialmente oculto) -->
+                {% if not noticia.procesado %}
+                <div id="platform-selector-{{ noticia.id }}" style="display: none; margin-bottom: 1rem; padding: 1rem; background-color: var(--tertiary-dark); border-radius: 6px; border-left: 3px solid var(--accent-blue);">
+                    <form method="POST" action="{{ url_for('procesar_noticia', noticia_id=noticia.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                        <div style="margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 0.95rem;">
+                                📡 Selecciona las plataformas donde publicar:
+                            </h4>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem;">
+                                <!-- Telegram -->
+                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: pointer;">
+                                    <input type="checkbox" name="platforms" value="telegram" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                    <span style="font-size: 0.9rem;">📱 Telegram</span>
+                                </label>
+
+                                <!-- Bluesky -->
+                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: pointer;">
+                                    <input type="checkbox" name="platforms" value="bluesky" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                    <span style="font-size: 0.9rem;">🦋 Bluesky</span>
+                                </label>
+
+                                <!-- Twitter -->
+                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: pointer;">
+                                    <input type="checkbox" name="platforms" value="twitter" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                    <span style="font-size: 0.9rem;">🐦 Twitter/X</span>
+                                </label>
+
+                                <!-- LinkedIn (deshabilitado temporalmente) -->
+                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: pointer; opacity: 0.5;" title="Temporalmente deshabilitado - Configuración en proceso">
+                                    <input type="checkbox" name="platforms" value="linkedin" disabled style="width: 18px; height: 18px; cursor: not-allowed;">
+                                    <span style="font-size: 0.9rem;">💼 LinkedIn <small>(próximamente)</small></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <button type="button" class="btn btn-secondary" style="padding: 0.5rem 0.75rem; font-size: 0.9rem;" onclick="togglePlatformSelector({{ noticia.id }})">
+                                ❌ Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.9rem;">
+                                ✅ Procesar y Publicar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {% endif %}
 
                 <!-- Estado y metadata -->
                 <div class="news-meta" style="margin-bottom: 1rem;">
@@ -98,6 +154,59 @@
                         </div>
                     {% endif %}
                 </div>
+
+                <!-- Semáforo de estado por plataforma -->
+                {% if noticia.procesado and noticia.plataformas_seleccionadas %}
+                <div style="margin-bottom: 1rem; padding: 1rem; background-color: var(--tertiary-dark); border-radius: 6px;">
+                    <h4 style="margin: 0 0 0.75rem 0; color: var(--text-secondary); font-size: 0.9rem;">
+                        Estado de Publicación por Plataforma:
+                    </h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem;">
+                        {% set platform_names = {'telegram': '📱 Telegram', 'bluesky': '🦋 Bluesky', 'twitter': '🐦 Twitter/X', 'linkedin': '💼 LinkedIn'} %}
+                        {% set plataformas_pub = noticia.plataformas_publicadas or {} %}
+
+                        {% for platform in noticia.plataformas_seleccionadas %}
+                            {% set platform_info = plataformas_pub.get(platform, {}) %}
+                            {% if platform_info and platform_info.get('post_url') %}
+                                {# Publicado exitosamente #}
+                                <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; border-left: 3px solid #00ff00;">
+                                    <span style="font-size: 1.2rem;">🟢</span>
+                                    <span style="font-size: 0.85rem;">{{ platform_names.get(platform, platform.capitalize()) }}</span>
+                                    {% if platform_info.get('post_url') %}
+                                        <a href="{{ platform_info.get('post_url') }}" target="_blank" rel="noopener noreferrer" style="margin-left: auto; color: var(--accent-blue); font-size: 0.8rem; text-decoration: none;">🔗</a>
+                                    {% endif %}
+                                </div>
+                            {% elif platform_info and platform_info.get('error') %}
+                                {# Error al publicar #}
+                                <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; border-left: 3px solid #ff0000;" title="{{ platform_info.get('error') }}">
+                                    <span style="font-size: 1.2rem;">🔴</span>
+                                    <span style="font-size: 0.85rem;">{{ platform_names.get(platform, platform.capitalize()) }}</span>
+                                    <span style="margin-left: auto; font-size: 0.8rem; color: var(--error);" title="{{ platform_info.get('error') }}">⚠️</span>
+                                </div>
+                            {% else %}
+                                {# Pendiente de publicación #}
+                                <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; border-left: 3px solid #ffaa00;">
+                                    <span style="font-size: 1.2rem;">🟡</span>
+                                    <span style="font-size: 0.85rem;">{{ platform_names.get(platform, platform.capitalize()) }}</span>
+                                    <span style="margin-left: auto; font-size: 0.8rem; color: var(--warning);">⏳</span>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+
+                        {# Mostrar plataformas NO seleccionadas si hay #}
+                        {% set all_platforms = ['telegram', 'bluesky', 'twitter', 'linkedin'] %}
+                        {% for platform in all_platforms %}
+                            {% if platform not in noticia.plataformas_seleccionadas %}
+                                <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; border-left: 3px solid #666666; opacity: 0.6;">
+                                    <span style="font-size: 1.2rem;">⚪</span>
+                                    <span style="font-size: 0.85rem; color: var(--text-secondary);">{{ platform_names.get(platform, platform.capitalize()) }}</span>
+                                    <span style="margin-left: auto; font-size: 0.75rem; color: var(--text-secondary);">No seleccionado</span>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Categoría y hashtags (si está procesado) -->
                 {% if noticia.procesado %}
@@ -206,4 +315,138 @@
         </a>
     </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePlatformSelector(noticiaId) {
+    const selector = document.getElementById('platform-selector-' + noticiaId);
+    if (selector.style.display === 'none') {
+        selector.style.display = 'block';
+    } else {
+        selector.style.display = 'none';
+    }
+}
+
+// Interceptar submit del formulario para mostrar progreso
+document.addEventListener('DOMContentLoaded', function() {
+    // Buscar todos los forms de procesamiento
+    const processForms = document.querySelectorAll('form[action*="procesar_noticia"]');
+
+    processForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const noticiaId = this.action.split('/').pop();
+            const formData = new FormData(this);
+
+            // Obtener plataformas seleccionadas
+            const platforms = Array.from(formData.getAll('platforms'));
+            const platformsText = platforms.map(p => {
+                const names = {telegram: 'Telegram', bluesky: 'Bluesky', twitter: 'Twitter/X', linkedin: 'LinkedIn'};
+                return names[p] || p;
+            }).join(', ');
+
+            // Ocultar el selector de plataformas
+            togglePlatformSelector(noticiaId);
+
+            // Crear y mostrar la barra de progreso
+            const newsCard = this.closest('.news-card');
+            const progressHtml = `
+                <div id="progress-${noticiaId}" style="margin: 1rem 0; padding: 1.5rem; background: linear-gradient(135deg, var(--tertiary-dark) 0%, var(--secondary-dark) 100%); border-radius: 8px; border: 2px solid var(--accent-blue);">
+                    <h4 style="margin: 0 0 1rem 0; color: var(--accent-blue); text-align: center;">
+                        🤖 Procesando Noticia...
+                    </h4>
+
+                    <div style="margin-bottom: 1rem;">
+                        <div id="step-1-${noticiaId}" class="progress-step" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: var(--tertiary-dark); border-radius: 6px; margin-bottom: 0.5rem; border-left: 3px solid #ffaa00;">
+                            <span class="spinner" style="font-size: 1.2rem;">⏳</span>
+                            <span style="font-size: 0.95rem;">Procesando con Claude AI...</span>
+                        </div>
+                        <div id="step-2-${noticiaId}" class="progress-step" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: var(--tertiary-dark); border-radius: 6px; margin-bottom: 0.5rem; opacity: 0.4; border-left: 3px solid #666;">
+                            <span style="font-size: 1.2rem;">⏸️</span>
+                            <span style="font-size: 0.95rem;">Enviando a plataformas: ${platformsText}</span>
+                        </div>
+                        <div id="step-3-${noticiaId}" class="progress-step" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: var(--tertiary-dark); border-radius: 6px; opacity: 0.4; border-left: 3px solid #666;">
+                            <span style="font-size: 1.2rem;">⏸️</span>
+                            <span style="font-size: 0.95rem;">Finalizando...</span>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; color: var(--text-secondary); font-size: 0.85rem;">
+                        Por favor espera, esto puede tomar unos momentos...
+                    </div>
+                </div>
+            `;
+
+            // Insertar después del selector de plataformas
+            const platformSelector = document.getElementById(`platform-selector-${noticiaId}`);
+            platformSelector.insertAdjacentHTML('afterend', progressHtml);
+
+            // Animar paso 1
+            setTimeout(() => {
+                updateProgressStep(noticiaId, 2);
+            }, 3000);
+
+            // Enviar el formulario via AJAX
+            fetch(this.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    updateProgressStep(noticiaId, 3);
+                    setTimeout(() => {
+                        // Recargar la página para ver los resultados
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    throw new Error('Error en el procesamiento');
+                }
+            })
+            .catch(error => {
+                const progressDiv = document.getElementById(`progress-${noticiaId}`);
+                progressDiv.innerHTML = `
+                    <div style="padding: 1rem; background-color: var(--error-bg, #ff000020); border-radius: 6px; border-left: 3px solid #ff0000; color: var(--error, #ff6b6b);">
+                        <strong>❌ Error:</strong> No se pudo procesar la noticia. Por favor, intenta de nuevo.
+                    </div>
+                `;
+                console.error('Error:', error);
+            });
+        });
+    });
+});
+
+function updateProgressStep(noticiaId, step) {
+    // Actualizar estilos del paso actual
+    for (let i = 1; i <= step; i++) {
+        const stepDiv = document.getElementById(`step-${i}-${noticiaId}`);
+        if (stepDiv) {
+            if (i < step) {
+                // Paso completado
+                stepDiv.style.opacity = '1';
+                stepDiv.style.borderLeftColor = '#00ff00';
+                stepDiv.querySelector('span:first-child').textContent = '✅';
+            } else if (i === step) {
+                // Paso actual
+                stepDiv.style.opacity = '1';
+                stepDiv.style.borderLeftColor = '#ffaa00';
+                const spinner = stepDiv.querySelector('.spinner');
+                if (spinner) spinner.textContent = '⏳';
+            }
+        }
+    }
+}
+</script>
+
+<style>
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.spinner {
+    display: inline-block;
+    animation: spin 2s linear infinite;
+}
+</style>
 {% endblock %}

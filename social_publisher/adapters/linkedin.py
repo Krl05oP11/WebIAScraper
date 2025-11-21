@@ -1,5 +1,48 @@
 """
 Adaptador para LinkedIn
+
+⚠️ ESTADO: TEMPORALMENTE DESHABILITADO
+==================================================
+
+PROBLEMA CONOCIDO:
+------------------
+LinkedIn API rechaza publicaciones con error 403 ACCESS_DENIED en campo /author
+a pesar de tener OAuth configurado correctamente con scope w_member_social.
+
+Error recibido:
+{
+  "status": 403,
+  "serviceErrorCode": 100,
+  "code": "ACCESS_DENIED",
+  "message": "Field Value validation failed in REQUEST_BODY:
+              Data Processing Exception while processing fields [/author]"
+}
+
+CAUSA RAÍZ:
+-----------
+El scope w_member_social (proporcionado por producto "Share on LinkedIn") es
+insuficiente para validar el campo author. Se requieren scopes adicionales que:
+- Fueron deprecados (r_liteprofile, r_basicprofile)
+- O requieren productos Enterprise (Community Management API)
+
+SOLUCIÓN TEMPORAL:
+------------------
+Posts manuales en LinkedIn hasta obtener aprobación de productos adicionales.
+
+SOLUCIÓN DEFINITIVA REQUERIDA:
+-------------------------------
+1. Contactar LinkedIn Support con reporte técnico (ver docs/LINKEDIN_ISSUE_REPORT.md)
+2. Solicitar producto Community Management API cuando se formalice el negocio
+3. O esperar respuesta de LinkedIn sobre configuración correcta
+
+DOCUMENTACIÓN:
+--------------
+- Reporte técnico completo: docs/LINKEDIN_ISSUE_REPORT.md
+- Documentación oficial: https://learn.microsoft.com/en-us/linkedin/
+- Stack Overflow refs en reporte
+
+Última actualización: 2025-11-21
+==================================================
 """
 import requests
 import logging
@@ -13,11 +56,13 @@ logger = logging.getLogger(__name__)
 
 class LinkedInAdapter(SocialMediaAdapter):
     """
-    Adaptador para publicar en LinkedIn
+    Adaptador para publicar en LinkedIn (CÓDIGO CONSERVADO PARA FUTURO)
 
     Documentación: https://learn.microsoft.com/en-us/linkedin/
 
     Rate limits: ~100 posts/día por usuario
+
+    NOTA: Ver header del archivo para detalles sobre estado actual y problema conocido.
     """
 
     API_BASE_URL = "https://api.linkedin.com/v2"
@@ -109,8 +154,9 @@ class LinkedInAdapter(SocialMediaAdapter):
         if len(full_text) > self.MAX_POST_LENGTH:
             full_text = self._truncate_text(full_text, self.MAX_POST_LENGTH)
 
-        # Formato UGC Post
-        # Documentación: https://learn.microsoft.com/en-us/linkedin/marketing/integrations/community-management/shares/ugc-post-api
+        # Formato UGC Post (API Legacy)
+        # Documentación: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/ugc-post-api
+        # IMPORTANTE: author debe ser urn:li:member:{id} NO urn:li:person:{id}
         post_data = {
             "author": self.person_urn,
             "lifecycleState": "PUBLISHED",
@@ -151,14 +197,14 @@ class LinkedInAdapter(SocialMediaAdapter):
             # Formatear contenido
             post_data = self.format_content(content)
 
-            # Headers
+            # Headers (UGC Posts API)
             headers = {
                 'Authorization': f'Bearer {self.access_token}',
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0'
             }
 
-            # Publicar
+            # Publicar (API Legacy /v2/ugcPosts)
             response = requests.post(
                 f"{self.API_BASE_URL}/ugcPosts",
                 json=post_data,

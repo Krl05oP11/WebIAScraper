@@ -330,7 +330,19 @@ class PublisherService:
 
         # Añadir a queue
         for noticia in noticias:
-            self.enqueue_news(noticia)
+            # Obtener plataformas seleccionadas por el usuario
+            # Si no hay selección, usar todas las disponibles
+            platforms = noticia.get('plataformas_seleccionadas')
+            if platforms:
+                # Filtrar solo las que están disponibles en los adaptadores
+                platforms = [p for p in platforms if p in self.adapters]
+                logger.info(f"📋 Noticia {noticia['id']}: publicar en {platforms}")
+            else:
+                # Si no hay selección, usar todas las disponibles
+                platforms = None
+                logger.info(f"📋 Noticia {noticia['id']}: publicar en todas las plataformas disponibles")
+
+            self.enqueue_news(noticia, platforms=platforms)
 
         logger.info(f"✅ Ciclo completado - {len(noticias)} noticias en queue")
 

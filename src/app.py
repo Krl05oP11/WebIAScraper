@@ -279,6 +279,20 @@ def procesar_noticia(noticia_id):
     Procesar una noticia individual para RRSS (traducción + optimización)
     """
     try:
+        # Obtener plataformas seleccionadas del formulario
+        plataformas_seleccionadas = request.form.getlist('platforms')
+
+        # Si no se seleccionó ninguna, usar todas las activas por defecto
+        if not plataformas_seleccionadas:
+            plataformas_seleccionadas = ['telegram', 'bluesky', 'twitter']
+
+        # Guardar plataformas seleccionadas en la base de datos
+        noticia = APublicar.query.get(noticia_id)
+        if noticia:
+            noticia.plataformas_seleccionadas = plataformas_seleccionadas
+            db.session.commit()
+            logger.info(f"Plataformas seleccionadas para noticia {noticia_id}: {plataformas_seleccionadas}")
+
         # Verificar que tengamos la API key de Anthropic
         anthropic_key = app.config.get('ANTHROPIC_API_KEY')
         if not anthropic_key:
@@ -292,7 +306,8 @@ def procesar_noticia(noticia_id):
         success = processor.process_item(noticia_id)
 
         if success:
-            flash('✅ Noticia procesada y traducida exitosamente', 'success')
+            plataformas_str = ', '.join(plataformas_seleccionadas)
+            flash(f'✅ Noticia procesada exitosamente. Se publicará en: {plataformas_str}', 'success')
         else:
             flash('❌ Error al procesar la noticia', 'error')
 
