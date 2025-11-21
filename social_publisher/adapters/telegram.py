@@ -79,40 +79,58 @@ class TelegramAdapter(SocialMediaAdapter):
         Returns:
             Diccionario con formato de Telegram
         """
-        # Construir mensaje con formato HTML
+        # Construir mensaje con formato HTML mejorado
         message_parts = []
 
-        # Título en negrita
+        # Separador visual superior
+        message_parts.append("━━━━━━━━━━━━━━━━━━━━")
+
+        # Título en negrita con emoji según categoría
         if content.titulo:
             title_clean = self._escape_html(content.titulo)
-            message_parts.append(f"<b>📰 {title_clean}</b>\n")
+            # Emoji según categoría
+            emoji = self._get_category_emoji(content.categoria)
+            message_parts.append(f"\n<b>{emoji} {title_clean}</b>\n")
 
-        # Descripción
+        # Descripción (usa resumen_medio si está disponible, sino descripción)
         if content.descripcion:
             desc_clean = self._escape_html(content.descripcion)
             message_parts.append(f"{desc_clean}\n")
 
-        # Categoría (si está disponible)
+        # Separador medio
+        message_parts.append("─────────────────────")
+
+        # Categoría con emoji
         if content.categoria:
             cat_clean = self._escape_html(content.categoria)
-            message_parts.append(f"\n📂 <i>{cat_clean}</i>")
+            message_parts.append(f"\n📂 Categoría: <i>{cat_clean}</i>")
 
-        # Hashtags
+        # Hashtags con mejor formato
         if content.hashtags:
             hashtags_str = self._format_hashtags(content.hashtags)
-            message_parts.append(f"\n\n{hashtags_str}")
+            message_parts.append(f"\n{hashtags_str}")
 
-        # URL (con preview)
+        # Separador inferior
+        message_parts.append("\n━━━━━━━━━━━━━━━━━━━━")
+
+        # Fuente y URL con atribución clara
         if content.url:
             url_clean = self._escape_html(content.url)
-            message_parts.append(f"\n\n🔗 <a href='{url_clean}'>Leer más</a>")
+            # Extraer nombre del dominio de la fuente
+            source_name = self._extract_source_name(content.url)
+            message_parts.append(f"\n📰 <b>Fuente:</b> {source_name}")
+            message_parts.append(f"🔗 <a href='{url_clean}'><b>Leer artículo original completo</b></a>")
+
+        # Firma del canal con disclaimer
+        message_parts.append("\n\n<i>📡 Schaller &amp; Ponce AI News</i>")
+        message_parts.append("<i>ℹ️ Resumen automático - Todo el crédito al medio original</i>")
 
         # Unir todo
         message_text = "\n".join(message_parts)
 
         # Truncar si excede el límite
         if len(message_text) > self.MAX_MESSAGE_LENGTH:
-            message_text = message_text[:self.MAX_MESSAGE_LENGTH - 20] + "\n\n[Truncado...]"
+            message_text = message_text[:self.MAX_MESSAGE_LENGTH - 100] + "\n\n[Truncado...]\n━━━━━━━━━━━━━━━━━━━━"
 
         return {
             "chat_id": self.channel_id,
@@ -120,6 +138,40 @@ class TelegramAdapter(SocialMediaAdapter):
             "parse_mode": "HTML",
             "disable_web_page_preview": False  # Mostrar preview de enlaces
         }
+
+    def _get_category_emoji(self, categoria: Optional[str]) -> str:
+        """
+        Obtener emoji según la categoría de la noticia
+
+        Args:
+            categoria: Categoría de la noticia
+
+        Returns:
+            Emoji apropiado
+        """
+        if not categoria:
+            return "📰"
+
+        categoria_lower = categoria.lower()
+
+        emoji_map = {
+            'research': '🔬',
+            'business': '💼',
+            'technology': '⚡',
+            'security': '🔒',
+            'startup': '🚀',
+            'ai': '🤖',
+            'news': '📰',
+            'tutorial': '📚',
+            'opinion': '💭',
+            'release': '🎉'
+        }
+
+        for key, emoji in emoji_map.items():
+            if key in categoria_lower:
+                return emoji
+
+        return "📰"  # Default
 
     def publish(self, content: PostContent) -> PostResult:
         """
@@ -224,6 +276,40 @@ class TelegramAdapter(SocialMediaAdapter):
             'remaining': 10000,
             'reset_at': datetime.utcnow() + timedelta(days=1)
         }
+
+    def _extract_source_name(self, url: str) -> str:
+        """
+        Extraer nombre legible de la fuente desde la URL
+
+        Args:
+            url: URL del artículo
+
+        Returns:
+            Nombre de la fuente
+        """
+        if not url:
+            return "Fuente desconocida"
+
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            domain = parsed.netloc
+
+            # Remover www. si existe
+            if domain.startswith('www.'):
+                domain = domain[4:]
+
+            # Capitalizar primera letra de cada palabra
+            # techcrunch.com -> TechCrunch.com
+            parts = domain.split('.')
+            if len(parts) >= 2:
+                name = parts[0].capitalize()
+                return f"{name}.{parts[-1]}"
+
+            return domain.capitalize()
+
+        except Exception:
+            return "Fuente externa"
 
     def _escape_html(self, text: str) -> str:
         """

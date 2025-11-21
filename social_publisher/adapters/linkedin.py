@@ -39,31 +39,24 @@ class LinkedInAdapter(SocialMediaAdapter):
 
         LinkedIn usa OAuth 2.0. El access_token debe obtenerse previamente
         a través del flujo de autorización.
+
+        Nota: Con scope w_member_social, no podemos verificar con /v2/me
+        así que simplemente verificamos que el token existe.
         """
         try:
             if not self.access_token:
                 logger.error("LinkedIn: access_token no proporcionado")
                 return False
 
-            # Verificar token obteniendo información del usuario
-            headers = {
-                'Authorization': f'Bearer {self.access_token}',
-                'X-Restli-Protocol-Version': '2.0.0'
-            }
-
-            response = requests.get(
-                f"{self.API_BASE_URL}/me",
-                headers=headers,
-                timeout=10
-            )
-
-            if response.status_code == 200:
-                self._authenticated = True
-                logger.info("LinkedIn: Autenticación exitosa")
-                return True
-            else:
-                logger.error(f"LinkedIn: Error de autenticación - {response.status_code}")
+            if not self.person_urn:
+                logger.error("LinkedIn: person_urn no proporcionado")
                 return False
+
+            # Con w_member_social, asumimos que el token es válido
+            # Se verificará realmente en el primer post
+            self._authenticated = True
+            logger.info("LinkedIn: Credenciales configuradas correctamente")
+            return True
 
         except Exception as e:
             logger.error(f"LinkedIn: Error en autenticación - {e}")
@@ -94,14 +87,20 @@ class LinkedInAdapter(SocialMediaAdapter):
         if content.descripcion:
             text_parts.append(content.descripcion)
 
+        # Fuente y URL con atribución clara
+        if content.url:
+            source_name = self._extract_source_name(content.url)
+            text_parts.append(f"\n\n📰 Fuente: {source_name}")
+            text_parts.append(f"🔗 Leer artículo original completo: {content.url}")
+
         # Hashtags
         if content.hashtags:
             hashtags_str = self._format_hashtags(content.hashtags)
             text_parts.append(f"\n\n{hashtags_str}")
 
-        # URL (LinkedIn hace preview automático)
-        if content.url:
-            text_parts.append(f"\n\n🔗 {content.url}")
+        # Disclaimer y firma
+        text_parts.append("\n\n📡 Schaller & Ponce AI News")
+        text_parts.append("ℹ️ Resumen automático - Todo el crédito al medio original")
 
         # Unir todo
         full_text = "\n".join(text_parts)
@@ -215,3 +214,37 @@ class LinkedInAdapter(SocialMediaAdapter):
             Diccionario con estimación de límites
         """
         return self._rate_limit_info
+
+    def _extract_source_name(self, url: str) -> str:
+        """
+        Extraer nombre legible de la fuente desde la URL
+
+        Args:
+            url: URL del artículo
+
+        Returns:
+            Nombre de la fuente
+        """
+        if not url:
+            return "Fuente desconocida"
+
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            domain = parsed.netloc
+
+            # Remover www. si existe
+            if domain.startswith('www.'):
+                domain = domain[4:]
+
+            # Capitalizar primera letra de cada palabra
+            # techcrunch.com -> TechCrunch.com
+            parts = domain.split('.')
+            if len(parts) >= 2:
+                name = parts[0].capitalize()
+                return f"{name}.{parts[-1]}"
+
+            return domain.capitalize()
+
+        except Exception:
+            return "Fuente externa"

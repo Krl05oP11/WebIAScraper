@@ -429,6 +429,7 @@ def stats_processing():
 
 
 @app.route('/api/news/to-publish', methods=['GET'])
+@csrf.exempt
 def api_news_to_publish():
     """
     API endpoint para que SocialPublisher obtenga noticias pendientes de publicar
@@ -462,6 +463,7 @@ def api_news_to_publish():
 
 
 @app.route('/api/news/<int:noticia_id>/mark-published', methods=['POST'])
+@csrf.exempt
 def api_mark_published(noticia_id):
     """
     Marcar una noticia como publicada en una plataforma específica

@@ -5,6 +5,7 @@ import requests
 import logging
 from typing import Dict, Optional
 from datetime import datetime, timedelta
+from requests_oauthlib import OAuth1Session
 
 from .base import SocialMediaAdapter, PostContent, PostResult
 
@@ -41,21 +42,25 @@ class TwitterAdapter(SocialMediaAdapter):
         """
         Verificar autenticación con Twitter
 
-        Twitter API v2 usa OAuth 2.0 Bearer Token para posting
+        Twitter API v2 usa OAuth 1.0a para posting con tokens que no expiran
         """
         try:
-            if not self.bearer_token:
-                logger.error("Twitter: bearer_token no proporcionado")
+            # Verificar que tenemos todas las credenciales OAuth 1.0a
+            if not all([self.api_key, self.api_secret, self.access_token, self.access_token_secret]):
+                logger.error("Twitter: Credenciales OAuth 1.0a incompletas")
                 return False
 
-            # Verificar token obteniendo información del usuario
-            headers = {
-                'Authorization': f'Bearer {self.bearer_token}'
-            }
+            # Crear sesión OAuth 1.0a
+            oauth = OAuth1Session(
+                self.api_key,
+                client_secret=self.api_secret,
+                resource_owner_key=self.access_token,
+                resource_owner_secret=self.access_token_secret
+            )
 
-            response = requests.get(
+            # Verificar autenticación obteniendo información del usuario
+            response = oauth.get(
                 f"{self.API_BASE_URL}/users/me",
-                headers=headers,
                 timeout=10
             )
 
@@ -65,7 +70,7 @@ class TwitterAdapter(SocialMediaAdapter):
                 logger.info(f"Twitter: Autenticación exitosa - @{user_data.get('data', {}).get('username', 'unknown')}")
                 return True
             else:
-                logger.error(f"Twitter: Error de autenticación - {response.status_code}")
+                logger.error(f"Twitter: Error de autenticación - {response.status_code}: {response.text}")
                 return False
 
         except Exception as e:
@@ -148,17 +153,18 @@ class TwitterAdapter(SocialMediaAdapter):
             # Formatear contenido
             tweet_data = self.format_content(content)
 
-            # Headers
-            headers = {
-                'Authorization': f'Bearer {self.bearer_token}',
-                'Content-Type': 'application/json'
-            }
+            # Crear sesión OAuth 1.0a
+            oauth = OAuth1Session(
+                self.api_key,
+                client_secret=self.api_secret,
+                resource_owner_key=self.access_token,
+                resource_owner_secret=self.access_token_secret
+            )
 
-            # Publicar
-            response = requests.post(
+            # Publicar usando OAuth 1.0a
+            response = oauth.post(
                 f"{self.API_BASE_URL}/tweets",
                 json=tweet_data,
-                headers=headers,
                 timeout=30
             )
 

@@ -42,6 +42,18 @@ env/
 *API?Key*.txt
 *Clave?API*.txt
 
+# Credentials files (NEVER commit)
+*_credentials*.txt
+*_credentials*.png
+*Keys*.txt
+*Token*.txt
+*Password*.txt
+*contraseña*.txt
+LinkedIn_credentials*
+X?Keys*
+BlueSky*
+WebIAScrapperBot*
+
 # Logs
 logs/
 *.log

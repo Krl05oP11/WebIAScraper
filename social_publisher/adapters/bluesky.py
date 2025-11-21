@@ -96,24 +96,31 @@ class BlueskyAdapter(SocialMediaAdapter):
         # Hashtags (máximo 2-3)
         hashtags_to_use = content.hashtags[:3] if content.hashtags else []
 
+        # Extraer nombre de la fuente
+        source_name = self._extract_source_name(content.url) if content.url else ""
+        source_part = f"\n📰 Vía: {source_name}" if source_name else ""
+
         # URL
-        url_part = f" {content.url}" if content.url else ""
+        url_part = f"\n🔗 {content.url}" if content.url else ""
 
         # Hashtags
         hashtags_part = ""
         if hashtags_to_use:
-            hashtags_part = " " + self._format_hashtags(hashtags_to_use)
+            hashtags_part = "\n" + self._format_hashtags(hashtags_to_use)
+
+        # Footer con disclaimer
+        footer = "\n\nℹ️ Resumen automático - Crédito al original"
 
         # Calcular espacio disponible
-        reserved_space = len(url_part) + len(hashtags_part)
-        available_for_text = self.MAX_POST_LENGTH - reserved_space - 5
+        reserved_space = len(source_part) + len(url_part) + len(hashtags_part) + len(footer)
+        available_for_text = self.MAX_POST_LENGTH - reserved_space - 10
 
         # Truncar si es necesario
         if len(main_text) > available_for_text:
             main_text = self._truncate_text(main_text, available_for_text)
 
         # Construir post
-        post_text = main_text + url_part + hashtags_part
+        post_text = main_text + source_part + url_part + hashtags_part + footer
 
         # Safety check
         if len(post_text) > self.MAX_POST_LENGTH:
@@ -225,3 +232,37 @@ class BlueskyAdapter(SocialMediaAdapter):
             'remaining': 1000,
             'reset_at': datetime.utcnow() + timedelta(days=1)
         }
+
+    def _extract_source_name(self, url: str) -> str:
+        """
+        Extraer nombre legible de la fuente desde la URL
+
+        Args:
+            url: URL del artículo
+
+        Returns:
+            Nombre de la fuente
+        """
+        if not url:
+            return ""
+
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            domain = parsed.netloc
+
+            # Remover www. si existe
+            if domain.startswith('www.'):
+                domain = domain[4:]
+
+            # Capitalizar primera letra
+            # techcrunch.com -> Techcrunch.com
+            parts = domain.split('.')
+            if len(parts) >= 2:
+                name = parts[0].capitalize()
+                return f"{name}.{parts[-1]}"
+
+            return domain.capitalize()
+
+        except Exception:
+            return ""
