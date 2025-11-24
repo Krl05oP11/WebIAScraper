@@ -72,11 +72,6 @@
                     </div>
 
                     <div style="display: flex; gap: 0.5rem; margin-left: 1rem;">
-                        {% if not noticia.procesado %}
-                            <button type="button" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.9rem;" onclick="togglePlatformSelector({{ noticia.id }})">
-                                🤖 Procesar
-                            </button>
-                        {% endif %}
                         <form method="POST" action="{{ url_for('eliminar_apublicar', noticia_id=noticia.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <button type="submit" class="btn-delete" onclick="return confirm('¿Eliminar esta noticia de A Publicar?')">
@@ -86,55 +81,69 @@
                     </div>
                 </div>
 
-                <!-- Selector de Plataformas (inicialmente oculto) -->
-                {% if not noticia.procesado %}
-                <div id="platform-selector-{{ noticia.id }}" style="display: none; margin-bottom: 1rem; padding: 1rem; background-color: var(--tertiary-dark); border-radius: 6px; border-left: 3px solid var(--accent-blue);">
-                    <form method="POST" action="{{ url_for('procesar_noticia', noticia_id=noticia.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <!-- Selector de Plataformas (SIEMPRE VISIBLE) -->
+                <div style="margin-bottom: 1rem; padding: 1rem; background-color: var(--tertiary-dark); border-radius: 6px; border-left: 3px solid var(--accent-blue);">
+                    <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 0.95rem;">
+                        📡 Selecciona plataformas para publicar:
+                    </h4>
 
-                        <div style="margin-bottom: 1rem;">
-                            <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 0.95rem;">
-                                📡 Selecciona las plataformas donde publicar:
-                            </h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem;">
+                        <!-- Telegram -->
+                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='transparent'">
+                            <input type="checkbox"
+                                   class="platform-checkbox-{{ noticia.id }} platform-checkbox"
+                                   name="platform_{{ noticia.id }}_telegram"
+                                   value="telegram"
+                                   data-noticia="{{ noticia.id }}"
+                                   style="width: 20px; height: 20px; cursor: pointer;">
+                            <span style="font-size: 0.9rem;">📱 Telegram</span>
+                        </label>
 
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem;">
-                                <!-- Telegram -->
-                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: pointer;">
-                                    <input type="checkbox" name="platforms" value="telegram" checked style="width: 18px; height: 18px; cursor: pointer;">
-                                    <span style="font-size: 0.9rem;">📱 Telegram</span>
-                                </label>
+                        <!-- Bluesky -->
+                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='transparent'">
+                            <input type="checkbox"
+                                   class="platform-checkbox-{{ noticia.id }} platform-checkbox"
+                                   name="platform_{{ noticia.id }}_bluesky"
+                                   value="bluesky"
+                                   data-noticia="{{ noticia.id }}"
+                                   style="width: 20px; height: 20px; cursor: pointer;">
+                            <span style="font-size: 0.9rem;">🦋 Bluesky</span>
+                        </label>
 
-                                <!-- Bluesky -->
-                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: pointer;">
-                                    <input type="checkbox" name="platforms" value="bluesky" checked style="width: 18px; height: 18px; cursor: pointer;">
-                                    <span style="font-size: 0.9rem;">🦋 Bluesky</span>
-                                </label>
+                        <!-- Twitter -->
+                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='transparent'">
+                            <input type="checkbox"
+                                   class="platform-checkbox-{{ noticia.id }} platform-checkbox"
+                                   name="platform_{{ noticia.id }}_twitter"
+                                   value="twitter"
+                                   data-noticia="{{ noticia.id }}"
+                                   style="width: 20px; height: 20px; cursor: pointer;">
+                            <span style="font-size: 0.9rem;">🐦 Twitter/X</span>
+                        </label>
 
-                                <!-- Twitter -->
-                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: pointer;">
-                                    <input type="checkbox" name="platforms" value="twitter" checked style="width: 18px; height: 18px; cursor: pointer;">
-                                    <span style="font-size: 0.9rem;">🐦 Twitter/X</span>
-                                </label>
+                        <!-- LinkedIn (deshabilitado temporalmente) -->
+                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: not-allowed; opacity: 0.5;" title="Temporalmente deshabilitado - Configuración en proceso">
+                            <input type="checkbox"
+                                   name="platform_{{ noticia.id }}_linkedin"
+                                   value="linkedin"
+                                   disabled
+                                   style="width: 20px; height: 20px; cursor: not-allowed;">
+                            <span style="font-size: 0.9rem;">💼 LinkedIn <small>(próximamente)</small></span>
+                        </label>
+                    </div>
 
-                                <!-- LinkedIn (deshabilitado temporalmente) -->
-                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; cursor: pointer; opacity: 0.5;" title="Temporalmente deshabilitado - Configuración en proceso">
-                                    <input type="checkbox" name="platforms" value="linkedin" disabled style="width: 18px; height: 18px; cursor: not-allowed;">
-                                    <span style="font-size: 0.9rem;">💼 LinkedIn <small>(próximamente)</small></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                            <button type="button" class="btn btn-secondary" style="padding: 0.5rem 0.75rem; font-size: 0.9rem;" onclick="togglePlatformSelector({{ noticia.id }})">
-                                ❌ Cancelar
+                    <!-- Botón Procesar con Claude (solo si NO está procesada) -->
+                    {% if not noticia.procesado %}
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                        <form method="POST" action="{{ url_for('procesar_noticia', noticia_id=noticia.id) }}" class="form-procesar-{{ noticia.id }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 0.95rem;">
+                                🤖 Procesar con Claude (Traducir + Resumir)
                             </button>
-                            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.9rem;">
-                                ✅ Procesar y Publicar
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
 
                 <!-- Estado y metadata -->
                 <div class="news-meta" style="margin-bottom: 1rem;">
@@ -157,7 +166,7 @@
 
                 <!-- Semáforo de estado por plataforma -->
                 {% if noticia.procesado and noticia.plataformas_seleccionadas %}
-                <div style="margin-bottom: 1rem; padding: 1rem; background-color: var(--tertiary-dark); border-radius: 6px;">
+                <div data-semaforo-noticia="{{ noticia.id }}" style="margin-bottom: 1rem; padding: 1rem; background-color: var(--tertiary-dark); border-radius: 6px;">
                     <h4 style="margin: 0 0 0.75rem 0; color: var(--text-secondary); font-size: 0.9rem;">
                         Estado de Publicación por Plataforma:
                     </h4>
@@ -317,19 +326,238 @@
 {% endif %}
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
-function togglePlatformSelector(noticiaId) {
-    const selector = document.getElementById('platform-selector-' + noticiaId);
-    if (selector.style.display === 'none') {
-        selector.style.display = 'block';
+// ========== FUNCIONES GLOBALES (fuera de DOMContentLoaded) ==========
+
+// Función para habilitar/deshabilitar botón PUBLICAR según checkboxes
+function updatePublishButton() {
+    // Contar cuántas noticias tienen al menos 1 checkbox marcado Y están procesadas
+    const allCheckboxes = document.querySelectorAll('input[type="checkbox"][data-noticia]:not([disabled])');
+    let hasSelection = false;
+
+    console.log('🔍 updatePublishButton ejecutado');
+    console.log('📊 Total checkboxes encontrados:', allCheckboxes.length);
+
+    // Agrupar checkboxes por noticia
+    const noticiaIds = new Set();
+    allCheckboxes.forEach(cb => {
+        if (cb.checked) {
+            console.log('✅ Checkbox marcado:', cb.value, 'noticia:', cb.dataset.noticia);
+            noticiaIds.add(cb.dataset.noticia);
+            hasSelection = true;
+        }
+    });
+
+    console.log('📌 Has selection:', hasSelection);
+    console.log('📋 Noticias con selección:', Array.from(noticiaIds));
+
+    const btnPublicar = document.getElementById('btn-publicar-seleccionadas');
+    if (btnPublicar) {
+        btnPublicar.disabled = !hasSelection;
+        console.log('🔘 Botón estado - disabled:', btnPublicar.disabled);
     } else {
-        selector.style.display = 'none';
+        console.error('❌ Botón PUBLICAR no encontrado');
     }
 }
 
-// Interceptar submit del formulario para mostrar progreso
+// Función para publicar noticias seleccionadas
+function publicarSeleccionadas() {
+    console.log('🚀 publicarSeleccionadas() ejecutada');
+
+    // Recolectar noticias con checkboxes marcados
+    const allCheckboxes = document.querySelectorAll('input[type="checkbox"][data-noticia]:checked:not([disabled])');
+    console.log('📊 Checkboxes marcados encontrados:', allCheckboxes.length);
+
+    // Agrupar por noticia
+    const noticiasMap = {};
+    allCheckboxes.forEach(cb => {
+        const noticiaId = cb.dataset.noticia;
+        const platform = cb.value;
+
+        if (!noticiasMap[noticiaId]) {
+            noticiasMap[noticiaId] = {
+                id: parseInt(noticiaId),
+                platforms: []
+            };
+        }
+        noticiasMap[noticiaId].platforms.push(platform);
+    });
+
+    // Convertir a array
+    const noticias = Object.values(noticiasMap);
+
+    if (noticias.length === 0) {
+        alert('No hay noticias seleccionadas para publicar');
+        return;
+    }
+
+    // Confirmar acción
+    const totalPlatforms = noticias.reduce((acc, n) => acc + n.platforms.length, 0);
+    if (!confirm(`¿Publicar ${noticias.length} noticia(s) en ${totalPlatforms} plataforma(s)?`)) {
+        return;
+    }
+
+    console.log('Publicando:', noticias);
+
+    // Enviar al endpoint /publicar-seleccionadas
+    fetch('/publicar-seleccionadas', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ noticias: noticias })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Iniciar monitoreo en tiempo real para cada noticia
+            noticias.forEach(noticia => {
+                monitorearPublicacion(noticia.id);
+            });
+
+            alert(`✅ Publicación iniciada para ${noticias.length} noticia(s). Monitoreando progreso...`);
+        } else {
+            alert('❌ Error al iniciar publicación: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error de conexión al iniciar publicación');
+    });
+}
+
+// Monitorear publicación de una noticia en tiempo real
+function monitorearPublicacion(noticiaId) {
+    let intentos = 0;
+    const maxIntentos = 60; // 60 intentos * 2s = 2 minutos máximo
+    let tiempoTranscurrido = 0;
+
+    const intervalo = setInterval(async () => {
+        intentos++;
+        tiempoTranscurrido += 2;
+
+        try {
+            const response = await fetch(`/api/status/${noticiaId}`);
+            const data = await response.json();
+
+            // Actualizar UI con el estado actual
+            actualizarSemaforoYContador(noticiaId, data, tiempoTranscurrido);
+
+            // Si completó (éxito completo, parcial, o error), detener polling
+            if (data.fase === 'publicado_completo' || data.fase === 'publicado_parcial' || data.fase === 'fallido') {
+                clearInterval(intervalo);
+                console.log(`Monitoreo completado para noticia ${noticiaId}: ${data.fase}`);
+
+                // Recargar después de un breve delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+
+            // Si alcanzamos el máximo de intentos sin respuesta, detener
+            if (intentos >= maxIntentos) {
+                clearInterval(intervalo);
+                console.warn(`Timeout monitoreando noticia ${noticiaId}`);
+            }
+
+        } catch (error) {
+            console.error(`Error monitoreando noticia ${noticiaId}:`, error);
+        }
+    }, 2000); // Polling cada 2 segundos
+}
+
+// Actualizar semáforo y contador regresivo
+function actualizarSemaforoYContador(noticiaId, data, tiempoTranscurrido) {
+    const platformNames = {
+        'telegram': '📱 Telegram',
+        'bluesky': '🦋 Bluesky',
+        'twitter': '🐦 Twitter/X',
+        'linkedin': '💼 LinkedIn'
+    };
+
+    // Encontrar el contenedor de semáforo
+    const semaforoContainer = document.querySelector(`[data-semaforo-noticia="${noticiaId}"]`);
+
+    if (!semaforoContainer) {
+        console.warn(`No se encontró contenedor de semáforo para noticia ${noticiaId}`);
+        return;
+    }
+
+    // Actualizar cada plataforma
+    const plataformas = data.plataformas_seleccionadas || [];
+    const plataformasPublicadas = data.plataformas_publicadas || {};
+
+    let html = '<h4 style="margin: 0 0 0.75rem 0; color: var(--text-secondary); font-size: 0.9rem;">';
+    html += `📡 Estado de Publicación (${tiempoTranscurrido}s transcurridos):</h4>`;
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem;">';
+
+    plataformas.forEach(platform => {
+        const info = plataformasPublicadas[platform] || {};
+        const status = info.status || 'pending';
+        const postUrl = info.post_url;
+        const error = info.error;
+
+        let semaforo = '🟡';
+        let borderColor = '#ffaa00';
+        let extraClass = '';
+        let statusText = '⏳';
+
+        if (status === 'success') {
+            semaforo = '🟢';
+            borderColor = '#00ff00';
+            statusText = '✅';
+        } else if (status === 'failed') {
+            semaforo = '🔴';
+            borderColor = '#ff0000';
+            statusText = '❌';
+        } else if (status === 'pending' || status === 'publishing') {
+            semaforo = '🟡';
+            borderColor = '#ffaa00';
+            extraClass = 'semaforo blinking';
+            const contador = Math.max(0, 60 - tiempoTranscurrido);
+            statusText = `${contador}/60s`;
+        }
+
+        html += `
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: var(--secondary-dark); border-radius: 4px; border-left: 3px solid ${borderColor};">
+                <span class="${extraClass}" style="font-size: 1.2rem;">${semaforo}</span>
+                <span style="font-size: 0.85rem;">${platformNames[platform] || platform}</span>
+                ${postUrl ? `<a href="${postUrl}" target="_blank" rel="noopener noreferrer" style="margin-left: auto; color: var(--accent-blue); font-size: 0.8rem; text-decoration: none;">🔗</a>` : `<span style="margin-left: auto; font-size: 0.75rem; font-family: monospace;">${statusText}</span>`}
+            </div>
+        `;
+    });
+
+    html += '</div>';
+
+    // Mostrar contador de reintentos si aplica
+    if (data.contador_reintentos > 0) {
+        html += `<div style="margin-top: 0.5rem; padding: 0.5rem; background-color: var(--warning); color: var(--primary-dark); border-radius: 4px; font-size: 0.8rem; font-weight: bold;">
+            🔄 Reintento ${data.contador_reintentos}/3
+        </div>`;
+    }
+
+    semaforoContainer.innerHTML = html;
+}
+
+// ========== EVENT LISTENERS (DOMContentLoaded) ==========
+
+// Interceptar submit del formulario para mostrar progreso y guardar plataformas
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 DOM Content Loaded - Inicializando...');
+
+    // Inicializar estado del botón PUBLICAR
+    updatePublishButton();
+
+    // Agregar event listeners a TODOS los checkboxes de plataformas
+    const allPlatformCheckboxes = document.querySelectorAll('.platform-checkbox');
+    console.log('🎯 Checkboxes con clase .platform-checkbox encontrados:', allPlatformCheckboxes.length);
+
+    allPlatformCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updatePublishButton);
+        console.log('✅ Event listener agregado a checkbox:', checkbox.value);
+    });
+
     // Buscar todos los forms de procesamiento
     const processForms = document.querySelectorAll('form[action*="procesar_noticia"]');
 
@@ -338,34 +566,42 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
 
             const noticiaId = this.action.split('/').pop();
+
+            // Obtener plataformas seleccionadas de los checkboxes
+            const checkboxes = document.querySelectorAll(`.platform-checkbox-${noticiaId}:checked`);
+            const platforms = Array.from(checkboxes).map(cb => cb.value);
+
+            if (platforms.length === 0) {
+                alert('Selecciona al menos una plataforma');
+                return;
+            }
+
             const formData = new FormData(this);
 
-            // Obtener plataformas seleccionadas
-            const platforms = Array.from(formData.getAll('platforms'));
+            // Agregar plataformas seleccionadas al formData
+            platforms.forEach(p => formData.append('platforms', p));
+
             const platformsText = platforms.map(p => {
                 const names = {telegram: 'Telegram', bluesky: 'Bluesky', twitter: 'Twitter/X', linkedin: 'LinkedIn'};
                 return names[p] || p;
             }).join(', ');
-
-            // Ocultar el selector de plataformas
-            togglePlatformSelector(noticiaId);
 
             // Crear y mostrar la barra de progreso
             const newsCard = this.closest('.news-card');
             const progressHtml = `
                 <div id="progress-${noticiaId}" style="margin: 1rem 0; padding: 1.5rem; background: linear-gradient(135deg, var(--tertiary-dark) 0%, var(--secondary-dark) 100%); border-radius: 8px; border: 2px solid var(--accent-blue);">
                     <h4 style="margin: 0 0 1rem 0; color: var(--accent-blue); text-align: center;">
-                        🤖 Procesando Noticia...
+                        🤖 Procesando con Claude...
                     </h4>
 
                     <div style="margin-bottom: 1rem;">
                         <div id="step-1-${noticiaId}" class="progress-step" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: var(--tertiary-dark); border-radius: 6px; margin-bottom: 0.5rem; border-left: 3px solid #ffaa00;">
                             <span class="spinner" style="font-size: 1.2rem;">⏳</span>
-                            <span style="font-size: 0.95rem;">Procesando con Claude AI...</span>
+                            <span style="font-size: 0.95rem;">Traduciendo y generando resúmenes...</span>
                         </div>
                         <div id="step-2-${noticiaId}" class="progress-step" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: var(--tertiary-dark); border-radius: 6px; margin-bottom: 0.5rem; opacity: 0.4; border-left: 3px solid #666;">
                             <span style="font-size: 1.2rem;">⏸️</span>
-                            <span style="font-size: 0.95rem;">Enviando a plataformas: ${platformsText}</span>
+                            <span style="font-size: 0.95rem;">Guardando plataformas: ${platformsText}</span>
                         </div>
                         <div id="step-3-${noticiaId}" class="progress-step" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: var(--tertiary-dark); border-radius: 6px; opacity: 0.4; border-left: 3px solid #666;">
                             <span style="font-size: 1.2rem;">⏸️</span>
@@ -379,14 +615,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
 
-            // Insertar después del selector de plataformas
-            const platformSelector = document.getElementById(`platform-selector-${noticiaId}`);
-            platformSelector.insertAdjacentHTML('afterend', progressHtml);
+            // Insertar después del formulario
+            form.insertAdjacentHTML('afterend', progressHtml);
 
-            // Animar paso 1
+            // Ocultar el formulario
+            form.style.display = 'none';
+
+            // Animar pasos
             setTimeout(() => {
                 updateProgressStep(noticiaId, 2);
-            }, 3000);
+            }, 2000);
 
             // Enviar el formulario via AJAX
             fetch(this.action, {
@@ -412,6 +650,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
                 console.error('Error:', error);
+                // Mostrar el formulario de nuevo
+                form.style.display = 'block';
             });
         });
     });
@@ -447,6 +687,24 @@ function updateProgressStep(noticiaId, step) {
 .spinner {
     display: inline-block;
     animation: spin 2s linear infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.semaforo.blinking {
+    animation: blink 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.platform-status.waiting {
+    animation: pulse 2s infinite;
 }
 </style>
 {% endblock %}

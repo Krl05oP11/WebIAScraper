@@ -9,6 +9,7 @@ from flask_wtf.csrf import CSRFProtect
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
+from sqlalchemy.orm.attributes import flag_modified
 
 # Agregar el directorio raíz al path
 sys.path.insert(0, '/app')
@@ -355,6 +356,150 @@ def procesar_todas():
     return redirect(url_for('lista_apublicar'))
 
 
+@app.route('/publicar-seleccionadas', methods=['POST'])
+@csrf.exempt  # Para llamadas desde social_publisher
+def publicar_seleccionadas():
+    """
+    Publicar noticias seleccionadas en plataformas elegidas
+
+    NO procesa con Claude - solo publica
+    Noticias deben estar en fase 'procesado' o superior
+
+    Request JSON:
+    {
+        "noticias": [
+            {
+                "id": 123,
+                "platforms": ["telegram", "bluesky"]
+            }
+        ]
+    }
+
+    Response JSON:
+    {
+        "success": true,
+        "resultados": {
+            "123": {
+                "queued": true,
+                "platforms": ["telegram", "bluesky"]
+            }
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No JSON data provided'}), 400
+
+        noticias_data = data.get('noticias', [])
+
+        if not noticias_data:
+            return jsonify({'success': False, 'error': 'No noticias provided'}), 400
+
+        resultados = {}
+
+        for noticia_data in noticias_data:
+            noticia_id = noticia_data.get('id')
+            platforms = noticia_data.get('platforms', [])
+
+            if not noticia_id or not platforms:
+                resultados[str(noticia_id)] = {"error": "ID o plataformas faltantes"}
+                continue
+
+            # Obtener noticia de BD
+            noticia = APublicar.query.get(noticia_id)
+
+            if not noticia:
+                resultados[str(noticia_id)] = {"error": "Noticia no encontrada"}
+                continue
+
+            # Verificar que esté procesada
+            if not noticia.procesado:
+                resultados[str(noticia_id)] = {"error": "Noticia no procesada con Claude"}
+                continue
+
+            # Actualizar fase y plataformas seleccionadas
+            noticia.fase = 'publicando'
+            noticia.plataformas_seleccionadas = platforms
+            noticia.ultimo_intento = datetime.utcnow()
+
+            # Inicializar plataformas_publicadas si no existe
+            if not noticia.plataformas_publicadas:
+                noticia.plataformas_publicadas = {}
+
+            # Marcar plataformas como pendientes
+            for platform in platforms:
+                if platform not in noticia.plataformas_publicadas:
+                    noticia.plataformas_publicadas[platform] = {}
+
+                noticia.plataformas_publicadas[platform]['status'] = 'pending'
+                noticia.plataformas_publicadas[platform]['intentos'] = 0
+
+            db.session.commit()
+
+            logger.info(f"Noticia {noticia_id} marcada para publicación en: {platforms}")
+            resultados[str(noticia_id)] = {"queued": True, "platforms": platforms}
+
+        return jsonify({
+            'success': True,
+            'resultados': resultados
+        })
+
+    except Exception as e:
+        logger.error(f"Error en publicar_seleccionadas: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/status/<int:noticia_id>')
+def status_noticia(noticia_id):
+    """
+    Obtener estado actual de una noticia para monitoreo en tiempo real
+
+    Response JSON:
+    {
+        "id": 123,
+        "fase": "publicando",
+        "procesado": true,
+        "plataformas_seleccionadas": ["telegram", "bluesky"],
+        "plataformas_publicadas": {
+            "telegram": {
+                "status": "success",
+                "post_url": "https://...",
+                "intentos": 1
+            },
+            "bluesky": {
+                "status": "pending",
+                "intentos": 0
+            }
+        },
+        "contador_reintentos": 0,
+        "ultimo_intento": "2025-11-23T12:00:00",
+        "proximo_reintento": null
+    }
+    """
+    try:
+        noticia = APublicar.query.get(noticia_id)
+
+        if not noticia:
+            return jsonify({'error': 'Noticia no encontrada'}), 404
+
+        return jsonify({
+            'id': noticia.id,
+            'fase': noticia.fase or 'pendiente',
+            'procesado': noticia.procesado,
+            'plataformas_seleccionadas': noticia.plataformas_seleccionadas or [],
+            'plataformas_publicadas': noticia.plataformas_publicadas or {},
+            'contador_reintentos': noticia.contador_reintentos or 0,
+            'ultimo_intento': noticia.ultimo_intento.isoformat() if noticia.ultimo_intento else None,
+            'proximo_reintento': noticia.proximo_reintento.isoformat() if noticia.proximo_reintento else None,
+            'titulo': noticia.titulo_es if noticia.titulo_es else noticia.titulo
+        })
+
+    except Exception as e:
+        logger.error(f"Error obteniendo status de noticia {noticia_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/export/social-media')
 def export_social_media():
     """
@@ -458,8 +603,10 @@ def api_news_to_publish():
         solo_procesados = request.args.get('procesados', 'true').lower() == 'true'
         limit = request.args.get('limit', 10, type=int)
 
-        # Query base
-        query = APublicar.query.filter_by(publicado=False)
+        # Query base - usar el NUEVO sistema de fases
+        query = APublicar.query.filter(
+            APublicar.fase.in_(['publicando', 'publicado_parcial'])
+        )
 
         if solo_procesados:
             query = query.filter_by(procesado=True)
@@ -506,37 +653,70 @@ def api_mark_published(noticia_id):
 
         # Si hubo error
         if data.get('error'):
+            noticia.plataformas_publicadas[platform] = {
+                'status': 'failed',
+                'error': data['error'],
+                'attempted_at': datetime.utcnow().isoformat()
+            }
             noticia.ultimo_error = f"{platform}: {data['error']}"
             noticia.intentos_publicacion = (noticia.intentos_publicacion or 0) + 1
-            db.session.commit()
+        else:
+            # Publicación exitosa
+            noticia.plataformas_publicadas[platform] = {
+                'status': 'success',
+                'post_id': data.get('post_id'),
+                'post_url': data.get('post_url'),
+                'published_at': datetime.utcnow().isoformat()
+            }
 
-            return jsonify({
-                'message': 'Error registrado',
-                'noticia_id': noticia_id,
-                'error': data['error']
-            }), 200
+            # Marcar como publicada si es la primera plataforma exitosa
+            if not noticia.publicado:
+                noticia.publicado = True
+                noticia.published_at = datetime.utcnow()
 
-        # Publicación exitosa
-        noticia.plataformas_publicadas[platform] = {
-            'post_id': data.get('post_id'),
-            'post_url': data.get('post_url'),
-            'published_at': datetime.utcnow().isoformat()
-        }
+            noticia.intentos_publicacion = (noticia.intentos_publicacion or 0) + 1
+            noticia.ultimo_error = None  # Limpiar error previo
 
-        # Marcar como publicada si es la primera plataforma
-        if not noticia.publicado:
-            noticia.publicado = True
-            noticia.published_at = datetime.utcnow()
+        # Marcar el campo JSONB como modificado para que SQLAlchemy detecte el cambio
+        flag_modified(noticia, 'plataformas_publicadas')
 
-        noticia.intentos_publicacion = (noticia.intentos_publicacion or 0) + 1
-        noticia.ultimo_error = None  # Limpiar error previo
+        # Actualizar fase según el estado de todas las plataformas seleccionadas
+        plataformas_seleccionadas = noticia.plataformas_seleccionadas or []
+        if plataformas_seleccionadas:
+            publicadas_data = noticia.plataformas_publicadas or {}
+
+            # Contar plataformas completadas (success o failed)
+            completadas = [p for p in plataformas_seleccionadas if p in publicadas_data]
+            exitosas = [
+                p for p in completadas
+                if isinstance(publicadas_data.get(p), dict) and publicadas_data[p].get('status') == 'success'
+            ]
+
+            # Determinar nueva fase
+            if len(completadas) == len(plataformas_seleccionadas):
+                # Todas las plataformas seleccionadas fueron procesadas
+                if len(exitosas) == len(plataformas_seleccionadas):
+                    noticia.fase = 'publicado_completo'
+                elif len(exitosas) > 0:
+                    noticia.fase = 'publicado_parcial'
+                else:
+                    noticia.fase = 'fallido'
+            else:
+                # Aún faltan plataformas por procesar
+                noticia.fase = 'publicando'
 
         db.session.commit()
+
+        # Obtener status de manera segura
+        platform_data = noticia.plataformas_publicadas.get(platform, {})
+        status = platform_data.get('status') if isinstance(platform_data, dict) else None
 
         return jsonify({
             'message': 'Noticia marcada como publicada',
             'noticia_id': noticia_id,
             'platform': platform,
+            'status': status,
+            'fase': noticia.fase,
             'total_platforms': len(noticia.plataformas_publicadas)
         }), 200
 

@@ -161,10 +161,17 @@ body {
     color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
     background-color: var(--light-blue);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(74, 144, 226, 0.3);
+}
+
+.btn-primary:disabled {
+    background-color: var(--border-color);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 .btn-secondary {
