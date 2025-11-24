@@ -79,3 +79,8 @@ htmlcov/
 *.tmp
 *.bak
 CONTINUACION_LINKEDIN.md
+
+# Screenshots and credentials
+*.png
+*.txt
+LinkedIn*.png

@@ -11,7 +11,9 @@ WebIAScrap es una aplicación web que:
 - ✅ Interfaz con paleta azul oscura para reducir fatiga ocular
 - ✅ Sistema de selección con checkboxes para marcar noticias de interés
 - ✅ Copia noticias seleccionadas a tabla "APublicar" para procesamiento posterior
-- ✅ **NUEVO:** Publicación automatizada en redes sociales (LinkedIn, Twitter, Bluesky, Telegram)
+- ✅ **NUEVO:** Publicación automatizada en redes sociales (Telegram, Bluesky, Twitter)
+- ✅ Sistema de fases: procesamiento separado de publicación
+- ✅ Monitoreo en tiempo real con semáforos animados
 - ✅ Ejecuta completamente aislado en Docker
 
 ## 🚀 Quick Start
@@ -252,6 +254,18 @@ WebIAScrap ahora incluye un microservicio de publicación automatizada en redes 
 - ✅ Rate limiting inteligente por plataforma
 - ✅ Tracking completo de publicaciones en BD
 - ✅ Arquitectura de microservicios escalable
+
+### **Estado Actual de Plataformas** (2025-11-24)
+
+| Plataforma | Estado | Notas |
+|------------|--------|-------|
+| 📱 **Telegram** | ✅ Funcionando | Bot: @WebIAScrapperBot |
+| 🦋 **Bluesky** | ✅ Funcionando | Publicación automática activa |
+| 🐦 **Twitter/X** | ⏸️ Pausado | Rate limit temporal, se reactivará |
+| 💼 **LinkedIn** | ❌ No disponible | Error 403 API - Requiere investigación |
+| 📘 **Facebook** | ❌ No viable | Requiere App Review empresarial |
+| 📷 **Instagram** | ❌ No viable | Solo cuentas Business con Page |
+| 🧵 **Threads** | ❌ No API | Meta no ha lanzado API pública |
 
 #### Configuración Rápida
 
