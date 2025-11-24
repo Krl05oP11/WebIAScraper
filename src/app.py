@@ -604,8 +604,10 @@ def api_news_to_publish():
         limit = request.args.get('limit', 10, type=int)
 
         # Query base - usar el NUEVO sistema de fases
+        # Solo devolver noticias en fase 'procesado' (listas para publicar)
+        # NO incluir 'publicado_parcial' ni 'publicado_completo' para evitar republicación
         query = APublicar.query.filter(
-            APublicar.fase.in_(['publicando', 'publicado_parcial'])
+            APublicar.fase == 'procesado'
         )
 
         if solo_procesados:
