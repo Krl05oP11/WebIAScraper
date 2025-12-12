@@ -41,7 +41,12 @@ app.config.from_object(config)
 # Configurar CORS para permitir peticiones desde el website
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:8888", "http://127.0.0.1:8888"],
+        "origins": [
+            "http://localhost:8888",
+            "http://127.0.0.1:8888",
+            "https://schaller-ponce.com.ar",
+            "https://www.schaller-ponce.com.ar"
+        ],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
