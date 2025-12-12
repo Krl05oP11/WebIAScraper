@@ -6,6 +6,7 @@ import sys
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_wtf.csrf import CSRFProtect
+from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
@@ -36,6 +37,15 @@ app = Flask(__name__)
 # Cargar configuración
 config = get_config()
 app.config.from_object(config)
+
+# Configurar CORS para permitir peticiones desde el website
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:8888", "http://127.0.0.1:8888"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # Inicializar extensiones
 csrf = CSRFProtect(app)
