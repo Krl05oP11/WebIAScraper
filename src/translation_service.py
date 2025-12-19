@@ -74,16 +74,9 @@ class TranslationService:
 
         except Exception as e:
             logger.error(f"Error en traducción: {e}")
-            # Retornar estructura vacía en caso de error
-            return {
-                'titulo_es': titulo,
-                'texto_es': texto,
-                'resumen_corto': texto[:280],
-                'resumen_medio': texto[:500],
-                'resumen_largo': texto,
-                'hashtags': '',
-                'categoria': 'General'
-            }
+            # IMPORTANTE: Lanzar excepción en lugar de retornar fallback
+            # Esto evita que se guarden traducciones fallidas en la DB
+            raise Exception(f"Fallo en traducción para '{titulo[:50]}...': {str(e)}")
 
     def _build_translation_prompt(self, titulo: str, texto: str, url: str) -> str:
         """
