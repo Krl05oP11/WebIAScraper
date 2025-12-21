@@ -765,6 +765,103 @@ def api_publication_status(noticia_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/admin/reprocess-failed-translations', methods=['POST'])
+def reprocess_failed_translations():
+    """
+    Re-procesa noticias con traducciones fallidas (titulo_es == titulo)
+    Endpoint de admin para limpiar la DB de traducciones fallidas
+    """
+    try:
+        logger.info("🔄 Iniciando re-procesamiento de traducciones fallidas...")
+
+        # Encontrar noticias con traducciones fallidas
+        failed_items = APublicar.query.filter(
+            APublicar.procesado == True,
+            APublicar.titulo_es == APublicar.titulo
+        ).all()
+
+        total = len(failed_items)
+        logger.info(f"📊 Encontradas {total} noticias con traducciones fallidas")
+
+        if total == 0:
+            return jsonify({
+                'status': 'success',
+                'message': 'No hay noticias con traducciones fallidas',
+                'total': 0,
+                'exitosas': 0,
+                'fallidas': 0
+            }), 200
+
+        # Crear procesador
+        processor = SocialMediaProcessor()
+
+        results = {
+            'total': total,
+            'exitosas': 0,
+            'fallidas': 0,
+            'detalles': []
+        }
+
+        # Re-procesar cada noticia
+        for i, item in enumerate(failed_items, 1):
+            logger.info(f"[{i}/{total}] Re-procesando noticia ID {item.id}: {item.titulo[:50]}...")
+
+            try:
+                # Marcar como no procesada temporalmente
+                item.procesado = False
+                db.session.commit()
+
+                # Re-procesar
+                if processor.process_item(item.id):
+                    results['exitosas'] += 1
+                    results['detalles'].append({
+                        'id': item.id,
+                        'titulo': item.titulo[:60],
+                        'status': 'exitosa'
+                    })
+                    logger.info(f"  ✓ Noticia {item.id} re-procesada exitosamente")
+                else:
+                    results['fallidas'] += 1
+                    results['detalles'].append({
+                        'id': item.id,
+                        'titulo': item.titulo[:60],
+                        'status': 'fallida'
+                    })
+                    logger.error(f"  ✗ Fallo al re-procesar noticia {item.id}")
+
+            except Exception as e:
+                results['fallidas'] += 1
+                results['detalles'].append({
+                    'id': item.id,
+                    'titulo': item.titulo[:60],
+                    'status': 'error',
+                    'error': str(e)
+                })
+                logger.error(f"  ✗ Error re-procesando noticia {item.id}: {e}")
+                db.session.rollback()
+
+        # Resumen final
+        logger.info(f"✅ Re-procesamiento completado:")
+        logger.info(f"   Total: {results['total']}")
+        logger.info(f"   Exitosas: {results['exitosas']}")
+        logger.info(f"   Fallidas: {results['fallidas']}")
+        logger.info(f"   Tasa de éxito: {(results['exitosas']/results['total']*100):.1f}%")
+
+        return jsonify({
+            'status': 'success',
+            'message': f"Re-procesadas {results['exitosas']} de {results['total']} noticias",
+            **results
+        }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Error en re-procesamiento: {e}")
+        db.session.rollback()
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+
 @app.route('/health')
 def health():
     """
