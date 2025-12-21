@@ -766,6 +766,7 @@ def api_publication_status(noticia_id):
 
 
 @app.route('/api/admin/reprocess-failed-translations', methods=['POST'])
+@csrf.exempt  # Permitir llamadas directas sin CSRF token
 def reprocess_failed_translations():
     """
     Re-procesa noticias con traducciones fallidas (titulo_es == titulo)
