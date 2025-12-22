@@ -3,6 +3,7 @@ WebIAScrap - Aplicación Flask Principal
 """
 import logging
 import sys
+import os
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_wtf.csrf import CSRFProtect
@@ -31,8 +32,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Crear aplicación Flask
-app = Flask(__name__)
+# Determinar el directorio de templates
+# Flask busca templates relativos al archivo donde se crea la app
+# Especificamos explícitamente para garantizar que funcione en cualquier entorno
+template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+
+# Crear aplicación Flask con template_folder explícito
+app = Flask(__name__, template_folder=template_dir)
 
 # Cargar configuración
 config = get_config()
@@ -287,6 +293,23 @@ def api_apublicar():
     """
     noticias = APublicar.query.order_by(APublicar.selected_at.desc()).all()
     return jsonify([noticia.to_dict() for noticia in noticias])
+
+
+@app.route('/apublicar-data')
+def apublicar_data():
+    """
+    API endpoint para obtener estadísticas de procesamiento (para contador en tiempo real)
+    """
+    noticias = APublicar.query.all()
+    total = len(noticias)
+    procesadas = sum(1 for n in noticias if n.procesado)
+    pendientes = total - procesadas
+
+    return jsonify({
+        'total': total,
+        'procesadas': procesadas,
+        'pendientes': pendientes
+    })
 
 
 @app.route('/apublicar/procesar/<int:noticia_id>', methods=['POST'])
