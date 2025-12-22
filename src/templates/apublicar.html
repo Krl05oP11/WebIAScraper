@@ -16,8 +16,8 @@
         <div class="stat-label">Procesadas</div>
     </div>
     <div class="stat-card">
-        <div class="stat-value">{{ noticias|rejectattr('procesado')|list|length }}</div>
-        <div class="stat-label">Pendientes</div>
+        <div class="stat-value" id="pendientes-count">{{ noticias|rejectattr('procesado')|list|length }}</div>
+        <div class="stat-label" id="pendientes-label">Pendientes</div>
     </div>
 </div>
 
@@ -25,9 +25,9 @@
 {% if noticias %}
 <div style="margin-bottom: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
     {% if noticias|rejectattr('procesado')|list|length > 0 %}
-    <form method="POST" action="{{ url_for('procesar_todas') }}">
+    <form method="POST" action="{{ url_for('procesar_todas') }}" id="form-procesar-todas">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <button type="submit" class="btn btn-secondary" onclick="return confirm('¿Procesar todas las noticias pendientes con Claude? Esto usará la API de Claude.')">
+        <button type="submit" class="btn btn-secondary" onclick="return confirmarProcesarTodas(event)">
             🤖 Procesar Todas con Claude
         </button>
     </form>
@@ -148,10 +148,10 @@
                 <!-- Estado y metadata -->
                 <div class="news-meta" style="margin-bottom: 1rem;">
                     <div class="news-date">
-                        📅 Publicado: {{ noticia.fecha_hora.strftime('%d/%m/%Y %H:%M') }}
+                        📅 Publicado: {{ noticia.fecha_hora.strftime('%d/%m/%Y %H:%M') if noticia.fecha_hora else 'Fecha no disponible' }}
                     </div>
                     <div class="news-date">
-                        ⭐ Seleccionado: {{ noticia.selected_at.strftime('%d/%m/%Y %H:%M') }}
+                        ⭐ Seleccionado: {{ noticia.selected_at.strftime('%d/%m/%Y %H:%M') if noticia.selected_at else 'Fecha no disponible' }}
                     </div>
                     {% if noticia.procesado %}
                         <div style="color: var(--success); font-weight: 600;">
@@ -329,6 +329,84 @@
 {% block extra_js %}
 <script>
 // ========== FUNCIONES GLOBALES (fuera de DOMContentLoaded) ==========
+
+// Variables globales para el contador de procesamiento
+let procesamientoInterval = null;
+let totalNoticias = {{ noticias|length }};
+let totalPendientes = {{ noticias|rejectattr('procesado')|list|length }};
+
+// Función para confirmar y procesar todas
+function confirmarProcesarTodas(event) {
+    event.preventDefault();
+
+    if (!confirm('¿Procesar todas las noticias pendientes con Claude? Esto usará la API de Claude.')) {
+        return false;
+    }
+
+    // Iniciar contador descendente
+    iniciarContadorProcesamiento();
+
+    // Enviar formulario
+    document.getElementById('form-procesar-todas').submit();
+
+    return false;
+}
+
+// Iniciar monitoreo del procesamiento
+function iniciarContadorProcesamiento() {
+    const pendientesCount = document.getElementById('pendientes-count');
+    const pendientesLabel = document.getElementById('pendientes-label');
+
+    // Cambiar estilo visual
+    pendientesLabel.textContent = 'Procesando...';
+    pendientesLabel.style.color = '#ffaa00';
+
+    // Iniciar polling cada 2 segundos
+    let intentos = 0;
+    const maxIntentos = 120; // 2 segundos * 120 = 4 minutos máximo
+
+    procesamientoInterval = setInterval(async () => {
+        intentos++;
+
+        try {
+            // Consultar estado actual
+            const response = await fetch('/apublicar-data');
+            const data = await response.json();
+
+            const procesadas = data.procesadas || 0;
+            const pendientes = data.pendientes || 0;
+
+            // Actualizar contador
+            pendientesCount.textContent = pendientes;
+
+            // Actualizar label con progreso
+            if (pendientes > 0) {
+                pendientesLabel.textContent = `Procesando... (${procesadas}/${totalNoticias})`;
+                pendientesLabel.style.color = '#ffaa00';
+            } else {
+                // Completado
+                pendientesLabel.textContent = 'Procesamiento Completo ✅';
+                pendientesLabel.style.color = '#00ff00';
+                clearInterval(procesamientoInterval);
+
+                // Recargar después de 2 segundos
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+
+            // Timeout
+            if (intentos >= maxIntentos) {
+                clearInterval(procesamientoInterval);
+                pendientesLabel.textContent = 'Timeout - Recarga la página';
+                pendientesLabel.style.color = '#ff0000';
+            }
+
+        } catch (error) {
+            console.error('Error actualizando contador:', error);
+        }
+    }, 2000);
+}
 
 // Función para habilitar/deshabilitar botón PUBLICAR según checkboxes
 function updatePublishButton() {

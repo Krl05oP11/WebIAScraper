@@ -30,7 +30,7 @@
                             </h2>
                             <div class="news-meta">
                                 <div class="news-date">
-                                    📅 {{ noticia.fecha_hora.strftime('%d/%m/%Y %H:%M') }}
+                                    📅 {{ noticia.fecha_hora.strftime('%d/%m/%Y %H:%M') if noticia.fecha_hora else 'Fecha no disponible' }}
                                 </div>
                                 {% if noticia.temas %}
                                     <div class="news-topics">
@@ -54,7 +54,7 @@
 
                     <div style="display: flex; gap: 1rem; align-items: center;">
                         <a href="javascript:void(0)"
-                           onclick="openModal('{{ noticia.titulo|replace("'", "\\'") }}', '{{ noticia.texto|replace("'", "\\'") }}', '{{ noticia.url }}', '{{ noticia.fecha_hora.strftime('%d/%m/%Y %H:%M') }}', '{{ noticia.temas }}')"
+                           onclick="openModal('{{ noticia.titulo|replace("'", "\\'") }}', '{{ noticia.texto|replace("'", "\\'") }}', '{{ noticia.url }}', '{{ noticia.fecha_hora.strftime('%d/%m/%Y %H:%M') if noticia.fecha_hora else 'Fecha no disponible' }}', '{{ noticia.temas }}')"
                            class="news-link">
                             📄 Ver resumen
                         </a>
