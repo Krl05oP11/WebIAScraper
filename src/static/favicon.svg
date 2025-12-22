@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Fondo circular -->
+  <circle cx="50" cy="50" r="48" fill="url(#grad)"/>
+
+  <!-- Robot/IA símbolo -->
+  <circle cx="50" cy="50" r="30" fill="white" opacity="0.2"/>
+
+  <!-- Ojos del robot -->
+  <circle cx="40" cy="45" r="5" fill="white"/>
+  <circle cx="60" cy="45" r="5" fill="white"/>
+
+  <!-- Antena -->
+  <line x1="50" y1="20" x2="50" y2="30" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="50" cy="18" r="3" fill="white"/>
+
+  <!-- Boca/sonrisa -->
+  <path d="M 35 60 Q 50 68 65 60" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Detalles laterales (representando datos) -->
+  <line x1="20" y1="50" x2="28" y2="50" stroke="white" stroke-width="2" opacity="0.7"/>
+  <line x1="72" y1="50" x2="80" y2="50" stroke="white" stroke-width="2" opacity="0.7"/>
+</svg>
