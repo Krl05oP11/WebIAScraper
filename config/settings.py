@@ -38,7 +38,7 @@ class Config:
 
     # Scraping Configuration
     NEWS_SOURCES = os.getenv('NEWS_SOURCES', 'techcrunch,wired,the-verge').split(',')
-    MAX_NEWS_COUNT = int(os.getenv('MAX_NEWS_COUNT', 30))
+    MAX_NEWS_COUNT = int(os.getenv('MAX_NEWS_COUNT', 100))  # Aumentado de 30 a 100 para más variedad
     SCRAPE_INTERVAL_HOURS = int(os.getenv('SCRAPE_INTERVAL_HOURS', 24))
 
     # News Keywords
