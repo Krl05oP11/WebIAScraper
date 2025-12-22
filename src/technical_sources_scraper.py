@@ -63,6 +63,52 @@ class TechnicalSourcesScraper:
             'name': 'Towards AI',
             'rss_url': 'https://pub.towardsai.net/feed',
             'tipo': 'Tutorial/News'
+        },
+        # Nuevas fuentes agregadas 22 dic 2025
+        'mit_tech_ai': {
+            'name': 'MIT Technology Review - AI',
+            'rss_url': 'https://www.technologyreview.com/topic/artificial-intelligence/feed',
+            'tipo': 'News/Analysis'
+        },
+        'wired_ai': {
+            'name': 'WIRED - AI',
+            'rss_url': 'https://www.wired.com/feed/tag/ai/latest/rss',
+            'tipo': 'News/Analysis'
+        },
+        'kdnuggets': {
+            'name': 'KDnuggets',
+            'rss_url': 'https://www.kdnuggets.com/feed',
+            'tipo': 'Tutorial/News'
+        },
+        'towards_data_science': {
+            'name': 'Towards Data Science',
+            'rss_url': 'https://towardsdatascience.com/feed',
+            'tipo': 'Tutorial/Analysis'
+        },
+        'analytics_vidhya': {
+            'name': 'Analytics Vidhya',
+            'rss_url': 'https://www.analyticsvidhya.com/feed/',
+            'tipo': 'Tutorial/News'
+        },
+        'langchain_blog': {
+            'name': 'LangChain Blog',
+            'rss_url': 'https://blog.langchain.dev/rss/',
+            'tipo': 'Tools/Framework'
+        },
+        'llamaindex_blog': {
+            'name': 'LlamaIndex Blog',
+            'rss_url': 'https://www.llamaindex.ai/blog/rss.xml',
+            'tipo': 'Tools/Framework'
+        },
+        'the_batch': {
+            'name': 'The Batch (DeepLearning.AI)',
+            'rss_url': 'https://www.deeplearning.ai/the-batch/feed/',
+            'tipo': 'Newsletter/News'
+        },
+        'science_news_ai': {
+            'name': 'Science News - AI',
+            'rss_url': 'https://www.sciencenews.org/topic/artificial-intelligence/feed',
+            'tipo': 'News/Research'
         }
     }
 

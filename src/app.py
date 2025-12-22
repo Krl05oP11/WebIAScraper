@@ -110,8 +110,9 @@ def scrape_and_save_news():
 
             # 2. Scraping desde fuentes técnicas (RSS)
             logger.info("🔬 Scraping desde fuentes técnicas...")
+            # sources=None usa TODAS las fuentes configuradas en TechnicalSourcesScraper
             technical_scraper = TechnicalSourcesScraper(
-                sources=['huggingface', 'arxiv_ai', 'google_ai', 'openai', 'deepmind'],
+                sources=None,  # Usar todas las fuentes disponibles (18 fuentes)
                 days_back=7
             )
             noticias_tecnicas = technical_scraper.fetch_all_sources(max_per_source=5)
