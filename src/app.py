@@ -305,6 +305,28 @@ def scrape_manual():
     return redirect(url_for('index'))
 
 
+@app.route('/noticias/limpiar', methods=['POST'])
+@auth.login_required
+def limpiar_noticias():
+    """
+    Eliminar TODAS las noticias de la tabla noticias
+    NO afecta la tabla apublicar (noticias procesadas)
+    Requiere autenticación HTTP Basic
+    """
+    try:
+        count = Noticia.query.count()
+        Noticia.query.delete()
+        db.session.commit()
+        logger.info(f"🗑️ Eliminadas {count} noticias de la base de datos")
+        flash(f'✅ {count} noticias eliminadas correctamente. Ahora puedes scrapear noticias frescas.', 'success')
+    except Exception as e:
+        logger.error(f"Error limpiando noticias: {e}")
+        flash(f'❌ Error al limpiar noticias: {str(e)}', 'error')
+        db.session.rollback()
+
+    return redirect(url_for('index'))
+
+
 @app.route('/api/noticias')
 def api_noticias():
     """

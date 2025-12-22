@@ -5,6 +5,15 @@
 {% block content %}
 <h1 class="page-title">📰 Últimas Noticias de IA</h1>
 
+<!-- Actions Bar -->
+<div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+    <form action="{{ url_for('limpiar_noticias') }}" method="POST" onsubmit="return confirm('⚠️ ¿Estás seguro de eliminar TODAS las noticias scrapeadas?\n\nEsto NO afectará las noticias ya procesadas en \"A Publicar\".\n\nDespués de eliminar, podrás scrapear noticias frescas.');" style="margin: 0;">
+        <button type="submit" class="btn" style="background: #dc2626; border-color: #dc2626;">
+            🗑️ Vaciar Noticias
+        </button>
+    </form>
+</div>
+
 <!-- Stats -->
 <div class="stats">
     <div class="stat-card">
