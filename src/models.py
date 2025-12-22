@@ -3,9 +3,49 @@ Modelos de base de datos para WebIAScrap
 """
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, JSON, TypeDecorator
+from sqlalchemy.dialects.postgresql import ARRAY
 
 db = SQLAlchemy()
+
+
+class StringArray(TypeDecorator):
+    """
+    Tipo personalizado que maneja arrays de strings en PostgreSQL
+    y strings separados por comas en SQLite para compatibilidad.
+    """
+    impl = String(500)
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(ARRAY(String))
+        else:
+            return dialect.type_descriptor(String(500))
+
+    def process_bind_param(self, value, dialect):
+        """Convierte lista a formato apropiado para cada BD"""
+        if value is None:
+            return value
+        if dialect.name == 'postgresql':
+            # PostgreSQL espera lista directamente
+            return value if isinstance(value, list) else []
+        else:
+            # SQLite: convertir lista a string separado por comas
+            if isinstance(value, list):
+                return ', '.join(value)
+            return value
+
+    def process_result_value(self, value, dialect):
+        """Convierte valor de BD a lista de Python"""
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        # Si es string (SQLite), convertir a lista
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(',') if item.strip()]
+        return []
 
 
 class Noticia(db.Model):
@@ -19,7 +59,7 @@ class Noticia(db.Model):
     texto = Column(Text, nullable=False)  # Resumen hasta 1000 palabras
     url = Column(String(1000), nullable=False, unique=True)
     fecha_hora = Column(DateTime, nullable=False, default=datetime.utcnow)
-    temas = Column(String(500), nullable=True)  # 3-5 palabras separadas por comas
+    temas = Column(StringArray, nullable=True)  # Lista de 3-5 temas (array en PostgreSQL, string en SQLite)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     def __repr__(self):
@@ -52,7 +92,7 @@ class APublicar(db.Model):
     texto = Column(Text, nullable=False)
     url = Column(String(1000), nullable=False)
     fecha_hora = Column(DateTime, nullable=False)
-    temas = Column(String(500), nullable=True)
+    temas = Column(StringArray, nullable=True)  # Lista de temas (array en PostgreSQL, string en SQLite)
     noticia_id = Column(Integer, nullable=True)
 
     # Contenido traducido al español
@@ -141,7 +181,7 @@ class APublicar(db.Model):
                 'instagram_whatsapp': self.resumen_largo
             },
             'hashtags': self.hashtags.split(',') if self.hashtags else [],
-            'temas': self.temas.split(',') if self.temas else [],
+            'temas': self.temas if self.temas else [],  # temas ya es una lista
             'idioma': 'es',
             'preparado_para_publicacion': self.procesado
         }

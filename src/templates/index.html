@@ -34,7 +34,7 @@
                                 </div>
                                 {% if noticia.temas %}
                                     <div class="news-topics">
-                                        🏷️ {{ noticia.temas }}
+                                        🏷️ {{ noticia.temas|join(', ') }}
                                     </div>
                                 {% endif %}
                             </div>
@@ -54,7 +54,7 @@
 
                     <div style="display: flex; gap: 1rem; align-items: center;">
                         <a href="javascript:void(0)"
-                           onclick="openModal('{{ noticia.titulo|replace("'", "\\'") }}', '{{ noticia.texto|replace("'", "\\'") }}', '{{ noticia.url }}', '{{ noticia.fecha_hora.strftime('%d/%m/%Y %H:%M') if noticia.fecha_hora else 'Fecha no disponible' }}', '{{ noticia.temas }}')"
+                           onclick="openModal('{{ noticia.titulo|replace("'", "\\'") }}', '{{ noticia.texto|replace("'", "\\'") }}', '{{ noticia.url }}', '{{ noticia.fecha_hora.strftime('%d/%m/%Y %H:%M') if noticia.fecha_hora else 'Fecha no disponible' }}', '{{ noticia.temas|join(", ") }}')"
                            class="news-link">
                             📄 Ver resumen
                         </a>

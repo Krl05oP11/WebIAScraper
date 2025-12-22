@@ -323,7 +323,7 @@ class TechnicalSourcesScraper:
             text = re.sub(r'\s+', ' ', text)
             return text.strip()
 
-    def _extract_feed_topics(self, entry: Dict, tipo: str) -> str:
+    def _extract_feed_topics(self, entry: Dict, tipo: str) -> List[str]:
         """
         Extrae temas de una entrada de feed
 
@@ -332,7 +332,7 @@ class TechnicalSourcesScraper:
             tipo: Tipo de fuente
 
         Returns:
-            String con temas separados por comas
+            Lista de strings con temas (3-5 temas)
         """
         topics = []
 
@@ -383,7 +383,7 @@ class TechnicalSourcesScraper:
         if len(topics) < 3:
             topics.extend(['AI', 'Machine Learning', 'Technology'][:3 - len(topics)])
 
-        return ', '.join(topics[:5])
+        return topics[:5]  # Retornar lista directamente (compatible con PostgreSQL ARRAY)
 
     def get_source_names(self) -> List[str]:
         """
