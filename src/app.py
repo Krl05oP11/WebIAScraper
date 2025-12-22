@@ -8,6 +8,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
+from flask_httpauth import HTTPBasicAuth
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
@@ -61,6 +62,22 @@ CORS(app, resources={
 # Inicializar extensiones
 csrf = CSRFProtect(app)
 init_db(app)
+
+# Inicializar autenticación HTTP Basic
+auth = HTTPBasicAuth()
+
+@auth.verify_password
+def verify_password(username, password):
+    """
+    Verificar credenciales de acceso
+    Lee usuario y contraseña desde variables de entorno
+    """
+    admin_user = os.getenv('ADMIN_USER', 'admin')
+    admin_pass = os.getenv('ADMIN_PASS', 'changeme')
+
+    if username == admin_user and password == admin_pass:
+        return username
+    return None
 
 # Scheduler para scraping automático
 scheduler = BackgroundScheduler()
@@ -158,9 +175,11 @@ def scrape_and_save_news():
 
 
 @app.route('/')
+@auth.login_required
 def index():
     """
     Página principal - Lista de noticias
+    Requiere autenticación HTTP Basic
     """
     # Obtener las 30 últimas noticias ordenadas por fecha
     noticias = Noticia.query.order_by(Noticia.fecha_hora.desc()).limit(30).all()
@@ -178,18 +197,22 @@ def ver_noticia(noticia_id):
 
 
 @app.route('/apublicar')
+@auth.login_required
 def lista_apublicar():
     """
     Ver lista de noticias seleccionadas para publicar
+    Requiere autenticación HTTP Basic
     """
     noticias = APublicar.query.order_by(APublicar.selected_at.desc()).all()
     return render_template('apublicar.html', noticias=noticias)
 
 
 @app.route('/apublicar/eliminar/<int:noticia_id>', methods=['POST'])
+@auth.login_required
 def eliminar_apublicar(noticia_id):
     """
     Eliminar una noticia de la lista A Publicar
+    Requiere autenticación HTTP Basic
     """
     try:
         noticia = APublicar.query.get_or_404(noticia_id)
@@ -206,9 +229,11 @@ def eliminar_apublicar(noticia_id):
 
 
 @app.route('/seleccionar', methods=['POST'])
+@auth.login_required
 def seleccionar_noticias():
     """
     Copiar noticias seleccionadas a la tabla APublicar
+    Requiere autenticación HTTP Basic
     """
     try:
         # Obtener IDs seleccionados del formulario
@@ -263,9 +288,11 @@ def seleccionar_noticias():
 
 
 @app.route('/scrape/manual')
+@auth.login_required
 def scrape_manual():
     """
     Ejecutar scraping manual
+    Requiere autenticación HTTP Basic
     """
     try:
         scrape_and_save_news()
@@ -313,9 +340,11 @@ def apublicar_data():
 
 
 @app.route('/apublicar/procesar/<int:noticia_id>', methods=['POST'])
+@auth.login_required
 def procesar_noticia(noticia_id):
     """
     Procesar una noticia individual para RRSS (traducción + optimización)
+    Requiere autenticación HTTP Basic
     """
     try:
         # Obtener plataformas seleccionadas del formulario
@@ -358,9 +387,11 @@ def procesar_noticia(noticia_id):
 
 
 @app.route('/apublicar/procesar-todas', methods=['POST'])
+@auth.login_required
 def procesar_todas():
     """
     Procesar todas las noticias pendientes (no procesadas) para RRSS
+    Requiere autenticación HTTP Basic
     """
     try:
         # Verificar que tengamos la API key de Anthropic
