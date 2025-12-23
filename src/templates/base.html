@@ -26,6 +26,9 @@
                     <a href="{{ url_for('lista_apublicar') }}" class="{% if request.endpoint == 'lista_apublicar' %}active{% endif %}">
                         📤 A Publicar
                     </a>
+                    <a href="{{ url_for('settings') }}" class="{% if request.endpoint == 'settings' %}active{% endif %}">
+                        ⚙️ Configuración
+                    </a>
                     <a href="{{ url_for('scrape_manual') }}" class="btn btn-primary">
                         🔄 Actualizar Noticias
                     </a>

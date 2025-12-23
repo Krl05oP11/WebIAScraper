@@ -5,6 +5,8 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, JSON, TypeDecorator
 from sqlalchemy.dialects.postgresql import ARRAY
+from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
 db = SQLAlchemy()
 
@@ -187,13 +189,60 @@ class APublicar(db.Model):
         }
 
 
+class User(db.Model):
+    """
+    Modelo de usuario con contraseñas hasheadas para autenticación
+    """
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(100), unique=True, nullable=False)
+    password_hash = Column(String(200), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_password_change = Column(DateTime, nullable=True)
+
+    def set_password(self, password):
+        """
+        Hash y guarda la contraseña usando PBKDF2-HMAC-SHA256
+
+        Args:
+            password (str): Contraseña en texto plano
+        """
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+        self.last_password_change = datetime.utcnow()
+
+    def check_password(self, password):
+        """
+        Verifica contraseña contra el hash almacenado
+
+        Args:
+            password (str): Contraseña en texto plano a verificar
+
+        Returns:
+            bool: True si la contraseña coincide, False si no
+        """
+        return check_password_hash(self.password_hash, password)
+
+    def __repr__(self):
+        return f'<User {self.username}>'
+
+
 def init_db(app):
     """
-    Inicializa la base de datos
+    Inicializa la base de datos y crea usuario admin por defecto si no existe
     """
     db.init_app(app)
 
     with app.app_context():
         # Crear todas las tablas
         db.create_all()
+
+        # Crear usuario admin por defecto si no existe
+        if User.query.count() == 0:
+            admin = User(username='admin')
+            admin.set_password(os.getenv('ADMIN_PASS', 'changeme'))
+            db.session.add(admin)
+            db.session.commit()
+            print("✅ Usuario admin creado con contraseña por defecto")
+
         print("✅ Base de datos inicializada correctamente")

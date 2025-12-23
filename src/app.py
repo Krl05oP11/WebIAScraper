@@ -18,10 +18,11 @@ from sqlalchemy.orm.attributes import flag_modified
 sys.path.insert(0, '/app')
 
 from config.settings import get_config
-from src.models import db, init_db, Noticia, APublicar
+from src.models import db, init_db, Noticia, APublicar, User
 from src.news_scraper import NewsScraper
 from src.technical_sources_scraper import TechnicalSourcesScraper
 from src.social_media_processor import SocialMediaProcessor
+from src.password_validator import validate_password, get_password_requirements
 
 # Configurar logging
 logging.basicConfig(
@@ -70,13 +71,27 @@ auth = HTTPBasicAuth()
 def verify_password(username, password):
     """
     Verificar credenciales de acceso
-    Lee usuario y contraseña desde variables de entorno
+    Prioridad: 1) Base de datos, 2) Variables de entorno (fallback)
     """
+    # Try database first
+    user = User.query.filter_by(username=username).first()
+    if user and user.check_password(password):
+        return username
+
+    # Fallback to environment variables (for backward compatibility)
     admin_user = os.getenv('ADMIN_USER', 'admin')
     admin_pass = os.getenv('ADMIN_PASS', 'changeme')
 
     if username == admin_user and password == admin_pass:
+        # Auto-migrate: create user in database
+        if not user:
+            user = User(username=username)
+            user.set_password(password)
+            db.session.add(user)
+            db.session.commit()
+            logger.info(f"Auto-migrated user '{username}' to database")
         return username
+
     return None
 
 # Scheduler para scraping automático
@@ -962,6 +977,82 @@ def health():
             'error': str(e),
             'timestamp': datetime.utcnow().isoformat()
         }), 500
+
+
+@app.route('/settings')
+@auth.login_required
+def settings():
+    """
+    Página de configuración - cambio de contraseña
+    Requiere autenticación HTTP Basic
+    """
+    username = auth.current_user()
+    user = User.query.filter_by(username=username).first()
+
+    return render_template('settings.html',
+                         user=user,
+                         password_requirements=get_password_requirements())
+
+
+@app.route('/settings/change-password', methods=['POST'])
+@auth.login_required
+def change_password():
+    """
+    Procesar cambio de contraseña
+    Requiere autenticación HTTP Basic
+    """
+    try:
+        username = auth.current_user()
+        user = User.query.filter_by(username=username).first()
+
+        if not user:
+            flash('❌ Usuario no encontrado', 'error')
+            return redirect(url_for('settings'))
+
+        # Obtener datos del formulario
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+
+        # Validar que todos los campos estén presentes
+        if not all([current_password, new_password, confirm_password]):
+            flash('❌ Todos los campos son obligatorios', 'error')
+            return redirect(url_for('settings'))
+
+        # Verificar contraseña actual
+        if not user.check_password(current_password):
+            flash('❌ La contraseña actual es incorrecta', 'error')
+            return redirect(url_for('settings'))
+
+        # Validar que las nuevas contraseñas coincidan
+        if new_password != confirm_password:
+            flash('❌ Las contraseñas nuevas no coinciden', 'error')
+            return redirect(url_for('settings'))
+
+        # Validar fortaleza de la nueva contraseña
+        is_valid, error_msg = validate_password(new_password)
+        if not is_valid:
+            flash(f'❌ {error_msg}', 'error')
+            return redirect(url_for('settings'))
+
+        # Verificar que la nueva contraseña sea diferente a la actual
+        if user.check_password(new_password):
+            flash('❌ La nueva contraseña debe ser diferente a la actual', 'error')
+            return redirect(url_for('settings'))
+
+        # Cambiar contraseña
+        user.set_password(new_password)
+        db.session.commit()
+
+        logger.info(f"Contraseña cambiada para usuario '{username}'")
+        flash('✅ Contraseña cambiada exitosamente', 'success')
+
+    except Exception as e:
+        logger.error(f"Error cambiando contraseña: {e}")
+        flash('❌ Error al cambiar la contraseña', 'error')
+        db.session.rollback()
+
+    return redirect(url_for('settings'))
 
 
 def init_scheduler():

@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Configuración - WebIAScrap{% endblock %}
+
+{% block content %}
+<h1 class="page-title">⚙️ Configuración</h1>
+
+<div class="settings-container" style="max-width: 600px; margin: 2rem auto;">
+    <!-- User Info Card -->
+    <div class="card" style="background-color: var(--secondary-dark); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border-left: 4px solid var(--accent-blue);">
+        <h2 style="margin: 0 0 1rem 0; color: var(--accent-blue); font-size: 1.2rem;">
+            👤 Información de Usuario
+        </h2>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-secondary);">Usuario:</span>
+                <span style="font-weight: 600;">{{ user.username if user else 'admin' }}</span>
+            </div>
+            {% if user and user.last_password_change %}
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-secondary);">Último cambio de contraseña:</span>
+                <span>{{ user.last_password_change.strftime('%d/%m/%Y %H:%M') }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Change Password Card -->
+    <div class="card" style="background-color: var(--secondary-dark); padding: 1.5rem; border-radius: 8px; border-left: 4px solid var(--accent-blue);">
+        <h2 style="margin: 0 0 1rem 0; color: var(--accent-blue); font-size: 1.2rem;">
+            🔐 Cambiar Contraseña
+        </h2>
+
+        <form action="{{ url_for('change_password') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+            <!-- Current Password -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="current_password" style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-weight: 500;">
+                    Contraseña Actual
+                </label>
+                <input
+                    type="password"
+                    id="current_password"
+                    name="current_password"
+                    required
+                    class="form-input"
+                    style="width: 100%; padding: 0.75rem; background-color: var(--tertiary-dark); border: 1px solid #2a4365; border-radius: 4px; color: var(--text-primary); font-size: 1rem;"
+                    autocomplete="current-password"
+                >
+            </div>
+
+            <!-- New Password -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="new_password" style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-weight: 500;">
+                    Nueva Contraseña
+                </label>
+                <input
+                    type="password"
+                    id="new_password"
+                    name="new_password"
+                    required
+                    class="form-input"
+                    style="width: 100%; padding: 0.75rem; background-color: var(--tertiary-dark); border: 1px solid #2a4365; border-radius: 4px; color: var(--text-primary); font-size: 1rem;"
+                    autocomplete="new-password"
+                >
+            </div>
+
+            <!-- Confirm Password -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="confirm_password" style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-weight: 500;">
+                    Confirmar Nueva Contraseña
+                </label>
+                <input
+                    type="password"
+                    id="confirm_password"
+                    name="confirm_password"
+                    required
+                    class="form-input"
+                    style="width: 100%; padding: 0.75rem; background-color: var(--tertiary-dark); border: 1px solid #2a4365; border-radius: 4px; color: var(--text-primary); font-size: 1rem;"
+                    autocomplete="new-password"
+                >
+            </div>
+
+            <!-- Password Requirements -->
+            <div style="margin-bottom: 1.5rem; padding: 1rem; background-color: var(--tertiary-dark); border-radius: 6px; border-left: 3px solid var(--info);">
+                <h4 style="margin: 0 0 0.75rem 0; color: var(--info); font-size: 0.9rem;">
+                    📋 Requisitos de Contraseña:
+                </h4>
+                <ul style="margin: 0; padding-left: 1.5rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.8;">
+                    {% for req in password_requirements %}
+                    <li>{{ req }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Submit Button -->
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-primary" style="flex: 1; padding: 0.875rem; font-size: 1rem; font-weight: 600;">
+                    ✅ Cambiar Contraseña
+                </button>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary" style="flex: 1; padding: 0.875rem; font-size: 1rem; text-align: center; text-decoration: none; display: inline-block;">
+                    ← Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Security Notice -->
+    <div style="margin-top: 2rem; padding: 1rem; background-color: var(--tertiary-dark); border-radius: 6px; border-left: 3px solid var(--warning);">
+        <h4 style="margin: 0 0 0.5rem 0; color: var(--warning); font-size: 0.9rem;">
+            ⚠️ Nota de Seguridad
+        </h4>
+        <p style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6;">
+            Tu contraseña está protegida con hash PBKDF2-SHA256 (1.000.000 iteraciones). Nunca compartas tu contraseña con nadie.
+            Si olvidas tu contraseña, necesitarás acceso a la base de datos para restablecerla.
+        </p>
+    </div>
+</div>
+
+<script>
+// Password strength indicator y validación en tiempo real
+document.addEventListener('DOMContentLoaded', function() {
+    const newPasswordInput = document.getElementById('new_password');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+
+    // Real-time validation feedback para nueva contraseña
+    newPasswordInput.addEventListener('input', function() {
+        const password = this.value;
+
+        // Check all requirements
+        const hasMinLength = password.length >= 8;
+        const hasUppercase = /[A-Z]/.test(password);
+        const hasLowercase = /[a-z]/.test(password);
+        const hasNumber = /\d/.test(password);
+        const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};:'",.<>?/\\|`~]/.test(password);
+
+        // Update border color based on strength
+        if (hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSymbol) {
+            this.style.borderColor = 'var(--success)';
+            this.style.borderWidth = '2px';
+        } else if (password.length > 0) {
+            this.style.borderColor = 'var(--warning)';
+            this.style.borderWidth = '2px';
+        } else {
+            this.style.borderColor = '#2a4365';
+            this.style.borderWidth = '1px';
+        }
+    });
+
+    // Confirm password matching
+    confirmPasswordInput.addEventListener('input', function() {
+        if (this.value && this.value === newPasswordInput.value) {
+            this.style.borderColor = 'var(--success)';
+            this.style.borderWidth = '2px';
+        } else if (this.value) {
+            this.style.borderColor = 'var(--error)';
+            this.style.borderWidth = '2px';
+        } else {
+            this.style.borderColor = '#2a4365';
+            this.style.borderWidth = '1px';
+        }
+    });
+
+    // Validate on submit
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const newPass = newPasswordInput.value;
+        const confirmPass = confirmPasswordInput.value;
+
+        if (newPass !== confirmPass) {
+            e.preventDefault();
+            alert('Las contraseñas no coinciden. Por favor verifica.');
+            confirmPasswordInput.focus();
+        }
+    });
+});
+</script>
+{% endblock %}
