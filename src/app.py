@@ -340,8 +340,11 @@ def api_noticias():
 def api_apublicar():
     """
     API endpoint para obtener noticias a publicar en formato JSON
+    Devuelve últimas 30 noticias ordenadas por fecha de procesamiento
     """
-    noticias = APublicar.query.order_by(APublicar.selected_at.desc()).all()
+    noticias = APublicar.query.filter(
+        APublicar.publicada_en_website == True
+    ).order_by(APublicar.processed_at.desc()).limit(30).all()
     return jsonify([noticia.to_dict() for noticia in noticias])
 
 
