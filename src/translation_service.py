@@ -104,7 +104,7 @@ Contenido: {texto}
 
 3. **Resúmenes para RRSS:**
    - **Resumen Corto** (máximo 280 caracteres): Para Twitter/LinkedIn. Debe ser impactante y conciso.
-   - **Resumen Medio** (máximo 500 caracteres): Para Facebook. Más contexto pero aún breve.
+   - **Resumen Medio** (máximo 1000 caracteres): Para Facebook. Más contexto y detalle.
    - **Resumen Largo** (800-1000 caracteres): Para Instagram/WhatsApp/Blog. Explicación más detallada.
 
 4. **Hashtags:**
@@ -128,7 +128,7 @@ Resumen de máximo 280 caracteres
 [/RESUMEN_CORTO]
 
 [RESUMEN_MEDIO]
-Resumen de máximo 500 caracteres
+Resumen de máximo 1000 caracteres
 [/RESUMEN_MEDIO]
 
 [RESUMEN_LARGO]

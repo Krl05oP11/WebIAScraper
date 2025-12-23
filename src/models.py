@@ -101,7 +101,7 @@ class APublicar(db.Model):
 
     # Resúmenes para RRSS (en español)
     resumen_corto = Column(String(280), nullable=True)  # Twitter/LinkedIn
-    resumen_medio = Column(String(500), nullable=True)  # Facebook
+    resumen_medio = Column(String(1000), nullable=True)  # Facebook
     resumen_largo = Column(Text, nullable=True)  # Instagram/Blog
 
     # Metadata para RRSS
