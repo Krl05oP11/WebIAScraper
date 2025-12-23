@@ -133,8 +133,11 @@ class SocialMediaProcessor:
         Returns:
             Diccionario con estadísticas de procesamiento
         """
-        # Obtener items pendientes
-        query = APublicar.query.filter_by(procesado=False)
+        # Obtener items pendientes - SOLO fase 'pendiente' o 'scrapeado'
+        # NO procesar items que ya tienen fase='procesado' aunque procesado=False
+        query = APublicar.query.filter(
+            APublicar.fase.in_(['pendiente', 'scrapeado'])
+        )
 
         if limit:
             query = query.limit(limit)
