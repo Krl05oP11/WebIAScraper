@@ -69,13 +69,28 @@ class Noticia(db.Model):
 
     def to_dict(self):
         """Convierte el objeto a diccionario"""
+        # Procesar temas correctamente para evitar serializaci\u00f3n incorrecta
+        temas_procesados = self.temas
+        if temas_procesados and isinstance(temas_procesados, str):
+            # Si es string con formato PostgreSQL array: {item1,item2,item3}
+            if temas_procesados.startswith('{') and temas_procesados.endswith('}'):
+                temas_procesados = temas_procesados[1:-1].split(',')
+            # Si es string separado por comas
+            elif ',' in temas_procesados:
+                temas_procesados = [item.strip() for item in temas_procesados.split(',')]
+            # Si es un solo tema
+            else:
+                temas_procesados = [temas_procesados] if temas_procesados else []
+        elif not isinstance(temas_procesados, list):
+            temas_procesados = []
+
         return {
             'id': self.id,
             'titulo': self.titulo,
             'texto': self.texto,
             'url': self.url,
             'fecha_hora': self.fecha_hora.isoformat() if self.fecha_hora else None,
-            'temas': self.temas,
+            'temas': temas_procesados,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
@@ -135,13 +150,28 @@ class APublicar(db.Model):
 
     def to_dict(self):
         """Convierte el objeto a diccionario"""
+        # Procesar temas correctamente para evitar serializaci\u00f3n incorrecta
+        temas_procesados = self.temas
+        if temas_procesados and isinstance(temas_procesados, str):
+            # Si es string con formato PostgreSQL array: {item1,item2,item3}
+            if temas_procesados.startswith('{') and temas_procesados.endswith('}'):
+                temas_procesados = temas_procesados[1:-1].split(',')
+            # Si es string separado por comas
+            elif ',' in temas_procesados:
+                temas_procesados = [item.strip() for item in temas_procesados.split(',')]
+            # Si es un solo tema
+            else:
+                temas_procesados = [temas_procesados] if temas_procesados else []
+        elif not isinstance(temas_procesados, list):
+            temas_procesados = []
+
         return {
             'id': self.id,
             'titulo': self.titulo,
             'texto': self.texto,
             'url': self.url,
             'fecha_hora': self.fecha_hora.isoformat() if self.fecha_hora else None,
-            'temas': self.temas,
+            'temas': temas_procesados,
             'noticia_id': self.noticia_id,
             'titulo_es': self.titulo_es,
             'texto_es': self.texto_es,
