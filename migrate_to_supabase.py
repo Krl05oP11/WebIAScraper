@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
-Script de sincronización de noticias: Local → Supabase (Producción)
-
-Sincroniza noticias procesadas desde WebIAScrap local (via API)
-a la base de datos de producción en Supabase
+Script de migración de noticias de PostgreSQL local a Supabase
+Migra todas las noticias procesadas de la base de datos local a Supabase vía REST API
 """
 
 import os
@@ -32,55 +30,43 @@ def print_warning(msg):
 def print_error(msg):
     print(f"{Colors.RED}❌ {msg}{Colors.END}")
 
-# URLs
-LOCAL_API_URL = 'http://localhost:8001/api/apublicar'
-
-# Archivo de configuración de Supabase
-SUPABASE_CONFIG_FILE = os.path.expanduser('~/.webiascrap_supabase_config')
-
+# Cargar credenciales de Supabase
 def load_supabase_config():
     """Carga las credenciales de Supabase desde el archivo de configuración"""
-    if not os.path.exists(SUPABASE_CONFIG_FILE):
+    config_file = os.path.expanduser('~/.webiascrap_supabase_config')
+
+    if not os.path.exists(config_file):
         print_error("Archivo de configuración de Supabase no encontrado")
-        print_warning(f"Se esperaba: {SUPABASE_CONFIG_FILE}")
-        print()
-        print_info("Para configurar Supabase:")
-        print("1. Ve a https://supabase.com")
-        print("2. Abre tu proyecto")
-        print("3. Ve a Settings > API")
-        print("4. Copia la Project URL y las API Keys")
-        print()
+        print_warning(f"Se esperaba: {config_file}")
         sys.exit(1)
 
     config = {}
-    with open(SUPABASE_CONFIG_FILE, 'r') as f:
+    with open(config_file, 'r') as f:
         for line in f:
             if '=' in line:
                 key, value = line.strip().split('=', 1)
                 config[key] = value
 
-    required_keys = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY']
-    for key in required_keys:
-        if key not in config:
-            print_error(f"Falta la clave {key} en el archivo de configuración")
-            sys.exit(1)
-
     return config
+
+# URLs
+LOCAL_API_URL = 'http://localhost:8001/api/apublicar'
 
 def get_local_news():
     """Obtiene noticias procesadas desde la API local"""
     try:
+        print_info("Obteniendo noticias procesadas de WebIAScrap local...")
         response = requests.get(LOCAL_API_URL, timeout=10)
         response.raise_for_status()
         news = response.json()
 
         # Filtrar solo las procesadas con traducción
         processed = [n for n in news if n.get('procesado') and n.get('titulo_es')]
+        print_success(f"Encontradas {len(processed)} noticias procesadas")
         return processed
     except requests.exceptions.ConnectionError:
         print_error("No se pudo conectar a WebIAScrap local")
-        print_warning("Asegúrate de que WebIAScrap esté corriendo (Docker)")
-        print_warning("Prueba abrir: http://localhost:8001")
+        print_warning("Asegúrate de que WebIAScrap esté corriendo en http://localhost:8001")
         sys.exit(1)
     except Exception as e:
         print_error(f"Error al obtener noticias locales: {e}")
@@ -124,74 +110,29 @@ def prepare_news_for_supabase(noticia):
         'publicada_en_website': True  # Marcar como publicada en website
     }
 
-def sync_news(news, config):
-    """Sincroniza noticias a Supabase (tabla apublicar)"""
+def migrate_to_supabase(news, config):
+    """Migra noticias a Supabase usando la REST API"""
     if not news:
-        print_warning("No hay noticias procesadas para sincronizar")
+        print_warning("No hay noticias para migrar")
         return 0
 
     supabase_url = config['SUPABASE_URL']
     service_key = config['SUPABASE_SERVICE_KEY']
 
-    print_success(f"Encontradas {len(news)} noticias procesadas")
     print()
+    print_info(f"Migrando {len(news)} noticias a Supabase...")
+    print()
+
+    inserted = 0
+    updated = 0
+    errors = 0
 
     headers = {
         'apikey': service_key,
         'Authorization': f'Bearer {service_key}',
         'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
+        'Prefer': 'resolution=merge-duplicates'
     }
-
-    # LÍMITE MÁXIMO de noticias en producción
-    MAX_NOTICIAS = 30
-
-    # Contar noticias actuales en producción
-    count_url = f"{supabase_url}/rest/v1/apublicar?publicada_en_website=eq.true&select=count"
-    count_headers = {**headers, 'Prefer': 'count=exact'}
-
-    try:
-        count_response = requests.get(count_url, headers=count_headers)
-        noticias_actuales = int(count_response.headers.get('Content-Range', '0').split('/')[-1])
-    except:
-        noticias_actuales = 0
-
-    print_info(f"Noticias actuales en producción: {noticias_actuales}/{MAX_NOTICIAS}")
-
-    # Calcular cuántas noticias nuevas vamos a insertar (sin duplicados)
-    urls_nuevas = [n.get('url') for n in news]
-    check_url = f"{supabase_url}/rest/v1/apublicar?url=in.({','.join([f'%22{url}%22' for url in urls_nuevas])})&select=url"
-
-    try:
-        check_response = requests.get(check_url, headers=headers)
-        existing_urls = [item['url'] for item in check_response.json()]
-        noticias_a_insertar = len([url for url in urls_nuevas if url not in existing_urls])
-    except:
-        noticias_a_insertar = len(news)
-
-    print_info(f"Noticias nuevas a insertar: {noticias_a_insertar}")
-
-    # Si después de insertar superaríamos el límite, eliminar las más viejas
-    total_despues = noticias_actuales + noticias_a_insertar
-    if total_despues > MAX_NOTICIAS:
-        cantidad_a_eliminar = total_despues - MAX_NOTICIAS
-        print_warning(f"Se eliminarán las {cantidad_a_eliminar} noticias más antiguas para mantener límite de {MAX_NOTICIAS}")
-
-        # Obtener las IDs de las noticias más antiguas
-        old_url = f"{supabase_url}/rest/v1/apublicar?publicada_en_website=eq.true&select=id&order=fecha_hora.asc,selected_at.asc&limit={cantidad_a_eliminar}"
-        old_response = requests.get(old_url, headers=headers)
-        old_ids = [item['id'] for item in old_response.json()]
-
-        # Eliminar las noticias antiguas
-        for old_id in old_ids:
-            delete_url = f"{supabase_url}/rest/v1/apublicar?id=eq.{old_id}"
-            requests.delete(delete_url, headers=headers)
-
-        print_warning(f"  → {len(old_ids)} noticias antiguas eliminadas")
-
-    # Insertar/actualizar noticias
-    inserted = 0
-    updated = 0
 
     for i, noticia in enumerate(news, 1):
         titulo_display = noticia.get('titulo_es') or noticia.get('titulo') or 'Sin título'
@@ -201,7 +142,7 @@ def sync_news(news, config):
         data = prepare_news_for_supabase(noticia)
 
         try:
-            # Verificar si ya existe (por URL)
+            # Primero verificar si existe
             check_url = f"{supabase_url}/rest/v1/apublicar?url=eq.{requests.utils.quote(noticia['url'])}&select=id"
             check_response = requests.get(check_url, headers=headers)
 
@@ -215,7 +156,8 @@ def sync_news(news, config):
                     updated += 1
                     print_warning(f"  → Actualizada")
                 else:
-                    print_error(f"  → Error al actualizar: {response.status_code}")
+                    print_error(f"  → Error al actualizar: {response.status_code} - {response.text[:100]}")
+                    errors += 1
             else:
                 # Insertar nueva
                 insert_url = f"{supabase_url}/rest/v1/apublicar"
@@ -225,53 +167,55 @@ def sync_news(news, config):
                     inserted += 1
                     print_success(f"  → Insertada (nueva)")
                 else:
-                    print_error(f"  → Error al insertar: {response.status_code}")
+                    print_error(f"  → Error al insertar: {response.status_code} - {response.text[:100]}")
+                    errors += 1
 
         except Exception as e:
             print_error(f"  → Error: {e}")
+            errors += 1
             continue
 
     print()
-    print_success("=== SINCRONIZACIÓN COMPLETADA ===")
+    print_success("=== MIGRACIÓN COMPLETADA ===")
     print_success(f"✨ Noticias nuevas insertadas: {inserted}")
     if updated > 0:
         print_warning(f"🔄 Noticias actualizadas: {updated}")
+    if errors > 0:
+        print_error(f"❌ Errores: {errors}")
 
     return inserted + updated
 
 def main():
     print()
     print("=" * 70)
-    print("  🔄 SINCRONIZADOR DE NOTICIAS: WebIAScrap Local → Supabase")
+    print("  🔄 MIGRACIÓN DE NOTICIAS: WebIAScrap Local → Supabase")
     print("=" * 70)
     print()
 
     # Cargar configuración de Supabase
     config = load_supabase_config()
-    print_success("Conectado a Supabase")
-    print()
+    print_success("Configuración de Supabase cargada")
 
     # Obtener noticias de la API local
-    print_info("Obteniendo noticias procesadas de WebIAScrap local...")
     news = get_local_news()
 
-    # Sincronizar
+    # Migrar
     try:
-        total = sync_news(news, config)
+        total = migrate_to_supabase(news, config)
 
         if total > 0:
             print()
-            print_success(f"✅ Sincronización exitosa: {total} noticias")
+            print_success(f"✅ Migración exitosa: {total} noticias")
             print()
-            print_info("🌐 Las noticias ya están disponibles en:")
-            print_info("   https://schaller-ponce.com.ar → Menú 'Noticias'")
+            print_info("🌐 Las noticias ya están disponibles en Supabase")
+            print_info("   Próximo paso: Actualizar el frontend del website")
             print()
         else:
             print()
-            print_warning("No se sincronizó ninguna noticia nueva")
+            print_warning("No se migró ninguna noticia nueva")
             print()
     except Exception as e:
-        print_error(f"Error durante la sincronización: {e}")
+        print_error(f"Error durante la migración: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
@@ -284,5 +228,5 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print()
-        print_warning("Sincronización cancelada por el usuario")
+        print_warning("Migración cancelada por el usuario")
         sys.exit(0)
