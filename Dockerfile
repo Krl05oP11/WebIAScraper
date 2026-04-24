@@ -21,8 +21,8 @@ COPY . .
 # Exponer puerto
 EXPOSE 8000
 
-# Crear directorio para logs
+# Crear directorio para logs (fallback; en producción se loguea a stdout)
 RUN mkdir -p /app/logs
 
 # Script de entrada
-CMD ["python", "src/app.py"]
+CMD ["gunicorn", "--config", "gunicorn.conf.py", "src.app:app"]
